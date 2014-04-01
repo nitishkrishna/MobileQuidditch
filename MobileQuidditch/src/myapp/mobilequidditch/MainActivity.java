@@ -2,6 +2,7 @@ package myapp.mobilequidditch;
 
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -23,16 +24,19 @@ import android.text.TextWatcher;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
+import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.Toast;
 
 public class MainActivity extends Activity {
 
   private static final String TAG = "NitishKrishna";
+  private static final ImageButton NULL = null;
   private boolean mResumed = false;
   private boolean mWriteMode = false;
   NfcAdapter mNfcAdapter;
-  EditText mNote;
+  ImageButton mNote;
 
   PendingIntent mNfcPendingIntent;
   IntentFilter[] mWriteTagFilters;
@@ -42,11 +46,10 @@ public class MainActivity extends Activity {
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
-    
+    mNote = NULL;
     mNfcAdapter = NfcAdapter.getDefaultAdapter(this);
-    findViewById(R.id.write_tag).setOnClickListener(mTagWriter);
-    mNote = ((EditText) findViewById(R.id.note));
-    mNote.addTextChangedListener(mTextWatcher);
+    findViewById(R.id.Quaffle).setOnClickListener(mTagWriter);
+    findViewById(R.id.Bludger).setOnClickListener(mTagWriter);
 
     // Handle all of our received NFC intents in this activity.
     mNfcPendingIntent = PendingIntent.getActivity(this, 0,
@@ -128,8 +131,11 @@ public class MainActivity extends Activity {
   };
   
   private View.OnClickListener mTagWriter = new View.OnClickListener() {
+    
     @Override
     public void onClick(View arg0) {
+      mNote = (ImageButton)arg0;
+      
         // Write to a tag for as long as the dialog is shown.
         disableNdefExchangeMode();
         enableTagWriteMode();
@@ -142,6 +148,7 @@ public class MainActivity extends Activity {
                         enableNdefExchangeMode();
                     }
                 }).create().show();
+        arg0.setVisibility(View.GONE);
     }
     };
     
@@ -152,6 +159,9 @@ public class MainActivity extends Activity {
               public void onClick(DialogInterface arg0, int arg1) {
                   String body = new String(msg.getRecords()[0].getPayload());
                   setNoteBody(body);
+                  int resID = getResources().getIdentifier(body, "id", getPackageName());
+                  mNote = (ImageButton)findViewById(resID);
+                  getNoteAsNdef();
               }
           })
           .setNegativeButton("No", new DialogInterface.OnClickListener() {
@@ -160,16 +170,25 @@ public class MainActivity extends Activity {
                   
               }
           }).show();
-  }
+      }
 
   private void setNoteBody(String body) {
-      Editable text = mNote.getText();
-      text.clear();
-      text.append(body);
+      //Editable text = mNote.getText();
+      //text.clear();
+      //text.append(body);
+    int resID = getResources().getIdentifier(body, "id", getPackageName());
+    findViewById(resID).setVisibility(View.VISIBLE);
   }
 
   private NdefMessage getNoteAsNdef() {
-      byte[] textBytes = mNote.getText().toString().getBytes();
+    Charset charset = Charset.forName("UTF-8");
+    byte[] textBytes;
+    if(mNote!=NULL){
+      textBytes = mNote.getContentDescription().toString().getBytes(charset);
+    }
+    else {
+      textBytes = "Nothing here".getBytes();
+    }
       NdefRecord textRecord = new NdefRecord(NdefRecord.TNF_MIME_MEDIA, "text/plain".getBytes(),
               new byte[] {}, textBytes);
       return new NdefMessage(new NdefRecord[] {

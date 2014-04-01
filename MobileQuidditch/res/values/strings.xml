@@ -6,6 +6,7 @@
     <string name="hello_world">Hello world!</string>
     <string name="hello">Hello World!</string>
     <string name="write_to_tag">Write to Tag</string>
-    <string name="default_note_text">Edit me!</string>
-
+    <string name="quaffle_text">Quaffle</string>
+    <string name="bludger_text">Bludger</string>
+    <string name="snitch_text">Snitch</string>
 </resources>

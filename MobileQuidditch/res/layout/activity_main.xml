@@ -3,10 +3,25 @@
     android:orientation="vertical"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
+    android:background="@drawable/cloudbg"
     >
-    <LinearLayout android:layout_height="wrap_content" android:layout_width="match_parent" android:id="@+id/linearLayout1">
-        <Button android:layout_height="wrap_content" android:layout_width="wrap_content" android:id="@+id/write_tag" android:text="@string/write_to_tag"></Button>
-    </LinearLayout>
-<EditText android:layout_width="fill_parent" android:id="@+id/note" android:layout_height="fill_parent" android:gravity="top" android:text="@string/default_note_text">
-</EditText>
+    <ImageButton
+            android:id="@+id/Quaffle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:src="@drawable/quaffle_button"
+            android:contentDescription="@string/quaffle_text"
+            android:visibility="gone" />
+    <ImageButton
+            android:id="@+id/Bludger"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:src="@drawable/bludger_button"
+            android:contentDescription="@string/bludger_text"
+            android:visibility="gone" />
+
 </LinearLayout>
