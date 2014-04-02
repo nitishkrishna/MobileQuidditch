@@ -3,10 +3,10 @@ package myapp.mobilequidditch;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
-
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.PendingIntent;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -19,13 +19,9 @@ import android.nfc.tech.Ndef;
 import android.nfc.tech.NdefFormatable;
 import android.os.Bundle;
 import android.os.Parcelable;
-import android.text.Editable;
-import android.text.TextWatcher;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
-import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
@@ -37,7 +33,7 @@ public class MainActivity extends Activity {
   private boolean mWriteMode = false;
   NfcAdapter mNfcAdapter;
   ImageButton mNote;
-
+  private static Context mContext;
   PendingIntent mNfcPendingIntent;
   IntentFilter[] mWriteTagFilters;
   IntentFilter[] mNdefExchangeFilters;
@@ -46,10 +42,11 @@ public class MainActivity extends Activity {
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
-    
+    mContext = MainActivity.this.getApplicationContext();
+    System.out.println("In On Create");
     mNfcAdapter = NfcAdapter.getDefaultAdapter(this);
-    findViewById(R.id.Quaffle).setOnClickListener(mTagWriter);
     findViewById(R.id.Bludger).setOnClickListener(mTagWriter);
+    findViewById(R.id.Quaffle).setOnClickListener(mTagWriter);
     mNote = NULL;
     //findViewById(R.id.Bludger).setVisibility(View.VISIBLE);
     //mNote = (ImageButton)findViewById(R.id.Bludger);
@@ -73,11 +70,13 @@ public class MainActivity extends Activity {
   protected void onResume() {
     super.onResume();
     mResumed = true;
+    System.out.println("In On Resume");
     // Sticky notes received from Android
     if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(getIntent().getAction())) {
         NdefMessage[] messages = getNdefMessages(getIntent());
         byte[] payload = messages[0].getRecords()[0].getPayload();
         setNoteBody(new String(payload));
+        System.out.println("ONRESUME: NoteBody set as " + payload.toString() );
         setIntent(new Intent()); // Consume this intent.
     }
   }
@@ -85,6 +84,7 @@ public class MainActivity extends Activity {
   @Override
   protected void onPause() {
       super.onPause();
+      System.out.println("In On Pause");
       mResumed = false;
   }
   
@@ -97,55 +97,39 @@ public class MainActivity extends Activity {
 
   @Override
   protected void onNewIntent(Intent intent) {
+
+    System.out.println("In On New Intent");
       // NDEF exchange mode
       if (!mWriteMode && NfcAdapter.ACTION_NDEF_DISCOVERED.equals(intent.getAction())) {
           NdefMessage[] msgs = getNdefMessages(intent);
+          System.out.println("Prompting for content");
           promptForContent(msgs[0]);
       }
 
       // Tag writing mode
       if (mWriteMode && NfcAdapter.ACTION_TAG_DISCOVERED.equals(intent.getAction())) {
           Tag detectedTag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
+          System.out.println("Writing to tag");
           writeTag(getNoteAsNdef(), detectedTag);
       }
-  }
-  
-  
-  private TextWatcher mTextWatcher = new TextWatcher() {
-
-    @Override
-    public void onTextChanged(CharSequence arg0, int arg1, int arg2, int arg3) {
-
-    }
-
-    @Override
-    public void beforeTextChanged(CharSequence arg0, int arg1, int arg2, int arg3) {
-
-    }
-
-    @Override
-    public void afterTextChanged(Editable arg0) {
-        if (mResumed) {
-          mNfcAdapter.setNdefPushMessage(getNoteAsNdef(), MainActivity.this);
-        }
-    }
-  };
+  }  
   
   private View.OnClickListener mTagWriter = new View.OnClickListener() {
     
     @Override
     public void onClick(View arg0) {
-      mNote = (ImageButton)arg0;
-      
+
+      System.out.println("In On Click");
+        mNote = (ImageButton)arg0;
         // Write to a tag for as long as the dialog is shown.
         disableNdefExchangeMode();
-        enableTagWriteMode(mNote);
+        enableTagWriteMode();
 
         new AlertDialog.Builder(MainActivity.this).setTitle("Touch tag to write")
                 .setOnCancelListener(new DialogInterface.OnCancelListener() {
                     @Override
                     public void onCancel(DialogInterface dialog) {
-                        disableTagWriteMode(mNote);
+                        disableTagWriteMode();
                         enableNdefExchangeMode();
                     }
                 }).create().show();
@@ -158,11 +142,11 @@ public class MainActivity extends Activity {
           .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
               @Override
               public void onClick(DialogInterface arg0, int arg1) {
+
+                System.out.println("In On Click - Prompt for content");
                   String body = new String(msg.getRecords()[0].getPayload());
                   setNoteBody(body);
-                  int resID = getResources().getIdentifier(body.toString(), "id", getBaseContext().getPackageName());
-                  mNote = (ImageButton)findViewById(resID);
-                  if(mNote == null){
+                  if(mNote == NULL){
                     System.out.println("mNote set as Null");
                   }
                   else {
@@ -182,13 +166,15 @@ public class MainActivity extends Activity {
       //Editable text = mNote.getText();
       //text.clear();
       //text.append(body);
-    System.out.println("setNoteBody - body value: " + body);
-    int resID = getResources().getIdentifier(body, "id", getPackageName());
-    findViewById(resID).setVisibility(View.VISIBLE);
+    System.out.println("In setNoteBody value: " + body);
+    int resID = this.getResources().getIdentifier(body, "id", this.getPackageName());
+    mNote = (ImageButton)findViewById(resID);
+    mNote.setVisibility(View.VISIBLE);
   }
 
   private NdefMessage getNoteAsNdef() {
     Charset charset = Charset.forName("UTF-8");
+    System.out.println("In getNoteAsNdef");
     byte[] textBytes;
     if(mNote!= NULL){
       textBytes = mNote.getContentDescription().toString().getBytes(charset);
@@ -210,6 +196,8 @@ public class MainActivity extends Activity {
   NdefMessage[] getNdefMessages(Intent intent) {
     // Parse the intent
     NdefMessage[] msgs = null;
+
+    System.out.println("In getNdefMessages");
     String action = intent.getAction();
     if (NfcAdapter.ACTION_TAG_DISCOVERED.equals(action)
             || NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action)) {
@@ -234,6 +222,8 @@ public class MainActivity extends Activity {
         Log.d(TAG, "Unknown intent.");
         finish();
     }
+
+    System.out.println("MSG returned: "+msgs[0].getRecords()[0].getPayload().toString());
     return msgs;
     }
 
@@ -246,8 +236,7 @@ public class MainActivity extends Activity {
     mNfcAdapter.disableForegroundDispatch(this);
     }
 
-  private void enableTagWriteMode(ImageButton arg0) {
-    arg0.setVisibility(View.GONE);
+  private void enableTagWriteMode() {
     mWriteMode = true;
     IntentFilter tagDetected = new IntentFilter(NfcAdapter.ACTION_TAG_DISCOVERED);
     mWriteTagFilters = new IntentFilter[] {
@@ -256,13 +245,14 @@ public class MainActivity extends Activity {
     mNfcAdapter.enableForegroundDispatch(this, mNfcPendingIntent, mWriteTagFilters, null);
     }
 
-  private void disableTagWriteMode(ImageButton arg0) {
-    arg0.setVisibility(View.VISIBLE);
+  private void disableTagWriteMode() {
     mWriteMode = false;
     mNfcAdapter.disableForegroundDispatch(this);
     }
   
   boolean writeTag(NdefMessage message, Tag tag) {
+
+    System.out.println("In WriteTag");
     int size = message.toByteArray().length;
 
     try {
@@ -282,6 +272,7 @@ public class MainActivity extends Activity {
 
             ndef.writeNdefMessage(message);
             toast("Wrote message to pre-formatted tag.");
+            System.out.println("WRITETAG: Wrote ->" + message.toString());
             return true;
         } else {
             NdefFormatable format = NdefFormatable.get(tag);
