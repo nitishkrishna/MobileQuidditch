@@ -46,11 +46,13 @@ public class MainActivity extends Activity {
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
-    mNote = NULL;
+    
     mNfcAdapter = NfcAdapter.getDefaultAdapter(this);
     findViewById(R.id.Quaffle).setOnClickListener(mTagWriter);
     findViewById(R.id.Bludger).setOnClickListener(mTagWriter);
-
+    mNote = NULL;
+    //findViewById(R.id.Bludger).setVisibility(View.VISIBLE);
+    //mNote = (ImageButton)findViewById(R.id.Bludger);
     // Handle all of our received NFC intents in this activity.
     mNfcPendingIntent = PendingIntent.getActivity(this, 0,
             new Intent(this, getClass()).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), 0);
@@ -78,7 +80,6 @@ public class MainActivity extends Activity {
         setNoteBody(new String(payload));
         setIntent(new Intent()); // Consume this intent.
     }
-    enableNdefExchangeMode();
   }
   
   @Override
@@ -138,30 +139,35 @@ public class MainActivity extends Activity {
       
         // Write to a tag for as long as the dialog is shown.
         disableNdefExchangeMode();
-        enableTagWriteMode();
+        enableTagWriteMode(mNote);
 
         new AlertDialog.Builder(MainActivity.this).setTitle("Touch tag to write")
                 .setOnCancelListener(new DialogInterface.OnCancelListener() {
                     @Override
                     public void onCancel(DialogInterface dialog) {
-                        disableTagWriteMode();
+                        disableTagWriteMode(mNote);
                         enableNdefExchangeMode();
                     }
                 }).create().show();
-        arg0.setVisibility(View.GONE);
     }
     };
     
     private void promptForContent(final NdefMessage msg) {
+      
       new AlertDialog.Builder(this).setTitle("Replace current content?")
           .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
               @Override
               public void onClick(DialogInterface arg0, int arg1) {
                   String body = new String(msg.getRecords()[0].getPayload());
                   setNoteBody(body);
-                  int resID = getResources().getIdentifier(body, "id", getPackageName());
+                  int resID = getResources().getIdentifier(body.toString(), "id", getBaseContext().getPackageName());
                   mNote = (ImageButton)findViewById(resID);
-                  getNoteAsNdef();
+                  if(mNote == null){
+                    System.out.println("mNote set as Null");
+                  }
+                  else {
+                    System.out.println("mNote set as Null" + mNote.getContentDescription().toString());
+                  }
               }
           })
           .setNegativeButton("No", new DialogInterface.OnClickListener() {
@@ -176,6 +182,7 @@ public class MainActivity extends Activity {
       //Editable text = mNote.getText();
       //text.clear();
       //text.append(body);
+    System.out.println("setNoteBody - body value: " + body);
     int resID = getResources().getIdentifier(body, "id", getPackageName());
     findViewById(resID).setVisibility(View.VISIBLE);
   }
@@ -183,12 +190,15 @@ public class MainActivity extends Activity {
   private NdefMessage getNoteAsNdef() {
     Charset charset = Charset.forName("UTF-8");
     byte[] textBytes;
-    if(mNote!=NULL){
+    if(mNote!= NULL){
       textBytes = mNote.getContentDescription().toString().getBytes(charset);
+      System.out.println("TextBytes set:" + mNote.getContentDescription().toString());
     }
     else {
       textBytes = "Nothing here".getBytes();
+      System.out.println("TextBytes set:" + "Nothing here");
     }
+      
       NdefRecord textRecord = new NdefRecord(NdefRecord.TNF_MIME_MEDIA, "text/plain".getBytes(),
               new byte[] {}, textBytes);
       return new NdefMessage(new NdefRecord[] {
@@ -236,7 +246,8 @@ public class MainActivity extends Activity {
     mNfcAdapter.disableForegroundDispatch(this);
     }
 
-  private void enableTagWriteMode() {
+  private void enableTagWriteMode(ImageButton arg0) {
+    arg0.setVisibility(View.GONE);
     mWriteMode = true;
     IntentFilter tagDetected = new IntentFilter(NfcAdapter.ACTION_TAG_DISCOVERED);
     mWriteTagFilters = new IntentFilter[] {
@@ -245,7 +256,8 @@ public class MainActivity extends Activity {
     mNfcAdapter.enableForegroundDispatch(this, mNfcPendingIntent, mWriteTagFilters, null);
     }
 
-  private void disableTagWriteMode() {
+  private void disableTagWriteMode(ImageButton arg0) {
+    arg0.setVisibility(View.VISIBLE);
     mWriteMode = false;
     mNfcAdapter.disableForegroundDispatch(this);
     }
