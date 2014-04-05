@@ -3,6 +3,7 @@ package myapp.mobilequidditch;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
+
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.PendingIntent;
@@ -48,8 +49,9 @@ public class MainActivity extends Activity {
     findViewById(R.id.Bludger).setOnClickListener(mTagWriter);
     findViewById(R.id.Quaffle).setOnClickListener(mTagWriter);
     mNote = NULL;
-    //findViewById(R.id.Bludger).setVisibility(View.VISIBLE);
-    //mNote = (ImageButton)findViewById(R.id.Bludger);
+    findViewById(R.id.Bludger).setVisibility(View.VISIBLE);
+    mNote = (ImageButton)findViewById(R.id.Bludger);
+    
     // Handle all of our received NFC intents in this activity.
     mNfcPendingIntent = PendingIntent.getActivity(this, 0,
             new Intent(this, getClass()).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), 0);
@@ -79,6 +81,7 @@ public class MainActivity extends Activity {
         System.out.println("ONRESUME: NoteBody set as " + payload.toString() );
         setIntent(new Intent()); // Consume this intent.
     }
+    enableNdefExchangeMode();
   }
   
   @Override
@@ -124,15 +127,28 @@ public class MainActivity extends Activity {
         // Write to a tag for as long as the dialog is shown.
         disableNdefExchangeMode();
         enableTagWriteMode();
-
-        new AlertDialog.Builder(MainActivity.this).setTitle("Touch tag to write")
-                .setOnCancelListener(new DialogInterface.OnCancelListener() {
-                    @Override
-                    public void onCancel(DialogInterface dialog) {
-                        disableTagWriteMode();
-                        enableNdefExchangeMode();
-                    }
-                }).create().show();
+        
+        new AlertDialog.Builder(MainActivity.this).setTitle("Initiate transfer?")
+        .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface arg0, int arg1) {
+              mNote.setVisibility(View.GONE); 
+              
+              new AlertDialog.Builder(MainActivity.this).setTitle("Touch tag to write")
+              .create().show();
+              disableTagWriteMode();
+              enableNdefExchangeMode();
+            }
+        })
+        .setNegativeButton("No", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface arg0, int arg1) {
+              mNote.setVisibility(View.VISIBLE);
+              disableTagWriteMode();
+              enableNdefExchangeMode();
+            }
+        }).show();
+        
     }
     };
     
@@ -157,7 +173,7 @@ public class MainActivity extends Activity {
           .setNegativeButton("No", new DialogInterface.OnClickListener() {
               @Override
               public void onClick(DialogInterface arg0, int arg1) {
-                  
+               
               }
           }).show();
       }
