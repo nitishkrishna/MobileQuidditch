@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     android:background="@drawable/cloudbg"
     >
-    <ImageButton
+    <ImageView
             android:id="@+id/Quaffle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -13,8 +13,9 @@
             android:gravity="center"
             android:src="@drawable/quaffle_button"
             android:contentDescription="@string/quaffle_text"
-            android:visibility="gone" />
-    <ImageButton
+            android:visibility="gone"
+            android:layout_centerInParent="true" />
+    <ImageView
             android:id="@+id/Bludger"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -22,6 +23,7 @@
             android:gravity="center"
             android:src="@drawable/bludger_button"
             android:contentDescription="@string/bludger_text"
-            android:visibility="gone" />
+            android:visibility="gone"
+            android:layout_centerInParent="true" />
 
-</LinearLayout>
+</RelativeLayout>

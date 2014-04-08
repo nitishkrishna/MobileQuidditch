@@ -3,7 +3,6 @@ package myapp.mobilequidditch;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
-
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.PendingIntent;
@@ -23,17 +22,22 @@ import android.os.Parcelable;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.Animation.AnimationListener;
+import android.view.animation.TranslateAnimation;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.Toast;
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity{
 
   private static final String TAG = "NitishKrishna";
   private static final ImageButton NULL = null;
   private boolean mResumed = false;
   private boolean mWriteMode = false;
   NfcAdapter mNfcAdapter;
-  ImageButton mNote;
+  ImageView mNote,ball;
+  Animation animation;
   private static Context mContext;
   PendingIntent mNfcPendingIntent;
   IntentFilter[] mWriteTagFilters;
@@ -46,11 +50,39 @@ public class MainActivity extends Activity {
     mContext = MainActivity.this.getApplicationContext();
     System.out.println("In On Create");
     mNfcAdapter = NfcAdapter.getDefaultAdapter(this);
-    findViewById(R.id.Bludger).setOnClickListener(mTagWriter);
-    findViewById(R.id.Quaffle).setOnClickListener(mTagWriter);
-    mNote = NULL;
-    findViewById(R.id.Bludger).setVisibility(View.VISIBLE);
-    mNote = (ImageButton)findViewById(R.id.Bludger);
+    findViewById(R.id.Bludger).setOnClickListener(ballCatcher);
+    findViewById(R.id.Quaffle).setOnClickListener(ballCatcher);
+    findViewById(R.id.Quaffle).setVisibility(View.VISIBLE);
+    
+    //Graphics for ball-catching
+    ball = (ImageView) findViewById(R.id.Quaffle);
+    animation = new TranslateAnimation(-450.0f, 450.0f,
+        0.0f, 0.0f);          //  new TranslateAnimation(xFrom,xTo, yFrom,yTo)
+    animation.setDuration(1000);  // animation duration 
+    animation.setRepeatCount(5);  // animation repeat count
+    animation.setRepeatMode(2);   // repeat animation (left to right, right to left )
+    animation.setFillAfter(false);   
+    ball.startAnimation(animation);  // start animation
+    
+    animation.setAnimationListener(new AnimationListener() {
+      @Override
+      public void onAnimationEnd(Animation arg0) {
+          //Functionality here
+        ball.setVisibility(View.GONE);
+      }
+
+      @Override
+      public void onAnimationRepeat(Animation arg0) {
+        // TODO Auto-generated method stub
+        
+      }
+
+      @Override
+      public void onAnimationStart(Animation arg0) {
+        // TODO Auto-generated method stub
+        
+      }
+  });
     
     // Handle all of our received NFC intents in this activity.
     mNfcPendingIntent = PendingIntent.getActivity(this, 0,
@@ -67,6 +99,7 @@ public class MainActivity extends Activity {
     IntentFilter tagDetected = new IntentFilter(NfcAdapter.ACTION_TAG_DISCOVERED);
     mWriteTagFilters = new IntentFilter[] { tagDetected };
   }
+  
 
   @Override
   protected void onResume() {
@@ -123,7 +156,8 @@ public class MainActivity extends Activity {
     public void onClick(View arg0) {
 
       System.out.println("In On Click");
-        mNote = (ImageButton)arg0;
+      ball.clearAnimation();
+        mNote = (ImageView)arg0;
         // Write to a tag for as long as the dialog is shown.
         disableNdefExchangeMode();
         enableTagWriteMode();
@@ -152,6 +186,24 @@ public class MainActivity extends Activity {
     }
     };
     
+    private View.OnClickListener ballCatcher = new View.OnClickListener() {
+      
+      @Override
+      public void onClick(View arg0) {
+        ball.clearAnimation();
+        mNote = (ImageView)arg0;
+        mNote.setOnClickListener(mTagWriter);
+        mNote.setVisibility(View.VISIBLE);
+        new AlertDialog.Builder(MainActivity.this).setTitle("You caught the "+mNote.getContentDescription().toString()+"!")
+        .setOnCancelListener(new DialogInterface.OnCancelListener() {
+            @Override
+            public void onCancel(DialogInterface dialog) {
+                mNote.setVisibility(View.VISIBLE);
+            }
+        }).create().show();
+      }
+      };
+    
     private void promptForContent(final NdefMessage msg) {
       
       new AlertDialog.Builder(this).setTitle("Replace current content?")
@@ -179,12 +231,9 @@ public class MainActivity extends Activity {
       }
 
   private void setNoteBody(String body) {
-      //Editable text = mNote.getText();
-      //text.clear();
-      //text.append(body);
     System.out.println("In setNoteBody value: " + body);
     int resID = this.getResources().getIdentifier(body, "id", this.getPackageName());
-    mNote = (ImageButton)findViewById(resID);
+    mNote = (ImageView) findViewById(resID);
     mNote.setVisibility(View.VISIBLE);
   }
 
