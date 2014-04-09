@@ -144,11 +144,11 @@ public class MainActivity extends Activity{
             public void onClick(DialogInterface arg0, int arg1) {
               mNote.setVisibility(View.GONE); 
               mNote.setOnClickListener(ballCatcher);
-              mNote = NULL;
               new AlertDialog.Builder(MainActivity.this).setTitle("Touch tag to write")
               .create().show();
               disableTagWriteMode();
               enableNdefExchangeMode();
+              mNote = NULL;
             }
         })
         .setNegativeButton("No", new DialogInterface.OnClickListener() {
@@ -198,6 +198,7 @@ public class MainActivity extends Activity{
                     wifiManager.setWifiEnabled(true);
                   }
                   else {
+                    System.out.println("Setting note body as "+body);
                     setNoteBody(body);
                   }
                   
@@ -222,7 +223,10 @@ public class MainActivity extends Activity{
     System.out.println("In setNoteBody value: " + body);
     int resID = this.getResources().getIdentifier(body, "id", this.getPackageName());
     mNote = (ImageView) findViewById(resID);
-    mNote.setVisibility(View.VISIBLE);
+    if(mNote!=NULL){
+      mNote.setVisibility(View.VISIBLE);
+    }
+    
   }
 
   private NdefMessage getNoteAsNdef() {
