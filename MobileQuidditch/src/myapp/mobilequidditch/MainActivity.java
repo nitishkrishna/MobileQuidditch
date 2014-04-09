@@ -1,8 +1,13 @@
 package myapp.mobilequidditch;
 
 
+import java.io.DataInputStream;
 import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.nio.charset.Charset;
+import java.util.concurrent.ExecutionException;
+
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.PendingIntent;
@@ -11,12 +16,14 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.IntentFilter.MalformedMimeTypeException;
+import android.net.wifi.WifiManager;
 import android.nfc.NdefMessage;
 import android.nfc.NdefRecord;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
 import android.nfc.tech.Ndef;
 import android.nfc.tech.NdefFormatable;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Parcelable;
 import android.util.Log;
@@ -36,8 +43,10 @@ public class MainActivity extends Activity{
   private boolean mResumed = false;
   private boolean mWriteMode = false;
   NfcAdapter mNfcAdapter;
-  ImageView mNote,ball;
-  Animation animation;
+  static ImageView mNote;
+  static ImageView ball;
+  static Animation animation;
+  static String ballReturn;
   private static Context mContext;
   PendingIntent mNfcPendingIntent;
   IntentFilter[] mWriteTagFilters;
@@ -52,38 +61,7 @@ public class MainActivity extends Activity{
     mNfcAdapter = NfcAdapter.getDefaultAdapter(this);
     findViewById(R.id.Bludger).setOnClickListener(ballCatcher);
     findViewById(R.id.Quaffle).setOnClickListener(ballCatcher);
-    findViewById(R.id.Quaffle).setVisibility(View.VISIBLE);
-    
-    //Graphics for ball-catching
-    ball = (ImageView) findViewById(R.id.Quaffle);
-    animation = new TranslateAnimation(-450.0f, 450.0f,
-        0.0f, 0.0f);          //  new TranslateAnimation(xFrom,xTo, yFrom,yTo)
-    animation.setDuration(1000);  // animation duration 
-    animation.setRepeatCount(5);  // animation repeat count
-    animation.setRepeatMode(2);   // repeat animation (left to right, right to left )
-    animation.setFillAfter(false);   
-    ball.startAnimation(animation);  // start animation
-    
-    animation.setAnimationListener(new AnimationListener() {
-      @Override
-      public void onAnimationEnd(Animation arg0) {
-          //Functionality here
-        ball.setVisibility(View.GONE);
-      }
-
-      @Override
-      public void onAnimationRepeat(Animation arg0) {
-        // TODO Auto-generated method stub
-        
-      }
-
-      @Override
-      public void onAnimationStart(Animation arg0) {
-        // TODO Auto-generated method stub
-        
-      }
-  });
-    
+    mNote=NULL;
     // Handle all of our received NFC intents in this activity.
     mNfcPendingIntent = PendingIntent.getActivity(this, 0,
             new Intent(this, getClass()).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), 0);
@@ -99,7 +77,6 @@ public class MainActivity extends Activity{
     IntentFilter tagDetected = new IntentFilter(NfcAdapter.ACTION_TAG_DISCOVERED);
     mWriteTagFilters = new IntentFilter[] { tagDetected };
   }
-  
 
   @Override
   protected void onResume() {
@@ -156,7 +133,6 @@ public class MainActivity extends Activity{
     public void onClick(View arg0) {
 
       System.out.println("In On Click");
-      ball.clearAnimation();
         mNote = (ImageView)arg0;
         // Write to a tag for as long as the dialog is shown.
         disableNdefExchangeMode();
@@ -167,7 +143,8 @@ public class MainActivity extends Activity{
             @Override
             public void onClick(DialogInterface arg0, int arg1) {
               mNote.setVisibility(View.GONE); 
-              
+              mNote.setOnClickListener(ballCatcher);
+              mNote = NULL;
               new AlertDialog.Builder(MainActivity.this).setTitle("Touch tag to write")
               .create().show();
               disableTagWriteMode();
@@ -190,7 +167,8 @@ public class MainActivity extends Activity{
       
       @Override
       public void onClick(View arg0) {
-        ball.clearAnimation();
+        
+        ball.clearAnimation(); 
         mNote = (ImageView)arg0;
         mNote.setOnClickListener(mTagWriter);
         mNote.setVisibility(View.VISIBLE);
@@ -211,14 +189,24 @@ public class MainActivity extends Activity{
               @Override
               public void onClick(DialogInterface arg0, int arg1) {
 
+                
                 System.out.println("In On Click - Prompt for content");
                   String body = new String(msg.getRecords()[0].getPayload());
-                  setNoteBody(body);
+                  
+                  if(body.equalsIgnoreCase("Revive")){
+                    WifiManager wifiManager = (WifiManager) MainActivity.this.getSystemService(Context.WIFI_SERVICE); 
+                    wifiManager.setWifiEnabled(true);
+                  }
+                  else {
+                    setNoteBody(body);
+                  }
+                  
                   if(mNote == NULL){
                     System.out.println("mNote set as Null");
                   }
                   else {
-                    System.out.println("mNote set as Null" + mNote.getContentDescription().toString());
+                    System.out.println("mNote set as " + mNote.getContentDescription().toString());
+                    mNote.setOnClickListener(mTagWriter);
                   }
               }
           })
@@ -295,6 +283,12 @@ public class MainActivity extends Activity{
   private void enableNdefExchangeMode() {
     mNfcAdapter.setNdefPushMessage(getNoteAsNdef(), MainActivity.this);
     mNfcAdapter.enableForegroundDispatch(this, mNfcPendingIntent, mNdefExchangeFilters, null);
+    
+    if(mNote == NULL){
+      new fileReceive().execute();
+    }
+    
+    
     }
 
   private void disableNdefExchangeMode() {
@@ -366,5 +360,87 @@ public class MainActivity extends Activity{
   private void toast(String text) {
     Toast.makeText(this, text, Toast.LENGTH_SHORT).show();
     }
+  
+  
+  private class fileReceive extends AsyncTask<String, String, String>
+  {
+       int port = 4242;
+       String values;
+
+       @Override
+       protected String doInBackground(String... arg0) {
+
+                  try{
+                          ServerSocket serverSocket = new ServerSocket(port);
+                          System.out.println("App listening...");
+                          Socket server = serverSocket.accept();
+                          DataInputStream in = new DataInputStream(server.getInputStream());
+                          values = in.readUTF().toString();
+                          MainActivity.this.runOnUiThread(new Runnable() {
+                          public void run() {
+                            Toast.makeText(MainActivity.this, values, Toast.LENGTH_SHORT).show();
+                            MainActivity.ballReturn = values;
+                            if(MainActivity.ballReturn.equalsIgnoreCase("Bludger")){
+                              MainActivity.mNote = (ImageView) findViewById(R.id.Bludger);
+                              
+                            }
+                            else if(MainActivity.ballReturn.equalsIgnoreCase("Quaffle")){
+                              MainActivity.mNote = (ImageView) findViewById(R.id.Quaffle);
+                            }
+                            MainActivity.mNote.setVisibility(View.VISIBLE); 
+                            ball = MainActivity.mNote;
+                            MainActivity.animation = new TranslateAnimation(-450.0f, 450.0f,
+                                0.0f, 0.0f);          
+                            MainActivity.animation.setDuration(700);   
+                            MainActivity.animation.setRepeatCount(5);  
+                            MainActivity.animation.setRepeatMode(2);   
+                            MainActivity.animation.setFillAfter(false);   
+                            MainActivity.ball.startAnimation(animation); 
+                            MainActivity.animation.setAnimationListener(new AnimationListener() {
+                              @Override
+                              public void onAnimationEnd(Animation arg0) {
+                                  //Functionality here
+                                MainActivity.ball.setVisibility(View.GONE);
+                              }
+
+                              @Override
+                              public void onAnimationRepeat(Animation arg0) {
+                                // TODO Auto-generated method stub
+                                
+                              }
+
+                              @Override
+                              public void onAnimationStart(Animation arg0) {
+                                // TODO Auto-generated method stub
+                                
+                              }
+                          });
+                            
+                          }
+                          });
+                          System.out.println("Rx value:"+values);
+                          server.close();
+                          //flag = false;
+                          serverSocket.close();
+   
+                  }
+                  catch (Exception e) {
+                          e.printStackTrace();
+                  }
+            return values;
+            }
+
+          protected void onPostExecute(String values) {
+                     // execution of result of Long time consuming operation
+                     
+                    }
+
+           protected void onProgressUpdate(String... text) {
+                    
+                     // Things to be done while execution of long running operation is in
+                     // progress. For example updating ProgessDialog
+                    }
+  }
+  
   
 }
