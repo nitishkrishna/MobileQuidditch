@@ -25,5 +25,15 @@
             android:contentDescription="@string/bludger_text"
             android:visibility="gone"
             android:layout_centerInParent="true" />
+    <ImageView
+            android:id="@+id/Goal"
+            android:layout_width="150sp"
+            android:layout_height="150sp"
+            android:layout_gravity="bottom"
+            android:gravity="bottom"
+            android:src="@drawable/goal_button"
+            android:contentDescription="@string/goal_text"
+            android:visibility="gone"
+            android:layout_alignParentBottom = "true"/>
 
 </RelativeLayout>

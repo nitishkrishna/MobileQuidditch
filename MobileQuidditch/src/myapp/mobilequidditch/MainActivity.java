@@ -2,11 +2,12 @@ package myapp.mobilequidditch;
 
 
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.nio.charset.Charset;
-import java.util.concurrent.ExecutionException;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -16,6 +17,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.IntentFilter.MalformedMimeTypeException;
+import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiManager;
 import android.nfc.NdefMessage;
 import android.nfc.NdefRecord;
@@ -24,7 +26,9 @@ import android.nfc.Tag;
 import android.nfc.tech.Ndef;
 import android.nfc.tech.NdefFormatable;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.os.Parcelable;
 import android.util.Log;
 import android.view.Menu;
@@ -61,6 +65,9 @@ public class MainActivity extends Activity{
     mNfcAdapter = NfcAdapter.getDefaultAdapter(this);
     findViewById(R.id.Bludger).setOnClickListener(ballCatcher);
     findViewById(R.id.Quaffle).setOnClickListener(ballCatcher);
+    findViewById(R.id.Goal).setOnClickListener(goalTender);
+    findViewById(R.id.Goal).setVisibility(View.VISIBLE);
+    
     mNote=NULL;
     // Handle all of our received NFC intents in this activity.
     mNfcPendingIntent = PendingIntent.getActivity(this, 0,
@@ -163,6 +170,36 @@ public class MainActivity extends Activity{
     }
     };
     
+    private View.OnClickListener goalTender = new View.OnClickListener() {
+      
+      @Override
+      public void onClick(View arg0) {
+
+        System.out.println("In On Click");
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+          new fileSend().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,"goalkeep");
+      } else {
+          new fileSend().execute("goalkeep");
+      }
+        
+         /* new AlertDialog.Builder(MainActivity.this).setTitle("Goal keep?")
+          .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+              @Override
+              public void onClick(DialogInterface arg0, int arg1) {
+                System.out.println("Going to file send");
+                
+              }
+          })
+          .setNegativeButton("No", new DialogInterface.OnClickListener() {
+              @Override
+              public void onClick(DialogInterface arg0, int arg1) {
+                
+              }
+          }).show();*/
+          
+      }
+      };
+    
     private View.OnClickListener ballCatcher = new View.OnClickListener() {
       
       @Override
@@ -196,6 +233,18 @@ public class MainActivity extends Activity{
                   if(body.equalsIgnoreCase("Revive")){
                     WifiManager wifiManager = (WifiManager) MainActivity.this.getSystemService(Context.WIFI_SERVICE); 
                     wifiManager.setWifiEnabled(true);
+                    String networkSSID = "skanda";
+                    String networkPass = "nitishkrishna";
+                    WifiConfiguration conf = new WifiConfiguration();
+                    conf.SSID = "\"" + networkSSID + "\""; 
+                    conf.preSharedKey  = "\"" + networkPass + "\"";
+                    conf.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.TKIP);
+                    conf.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.CCMP);
+                    conf.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.WPA_PSK);
+                    conf.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.TKIP);
+                    conf.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.CCMP);
+                    conf.allowedProtocols.set(WifiConfiguration.Protocol.RSN);
+                    wifiManager.addNetwork(conf);
                   }
                   else {
                     System.out.println("Setting note body as "+body);
@@ -289,7 +338,11 @@ public class MainActivity extends Activity{
     mNfcAdapter.enableForegroundDispatch(this, mNfcPendingIntent, mNdefExchangeFilters, null);
     
     if(mNote == NULL){
-      new fileReceive().execute();
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+        new fileReceive().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+    } else {
+        new fileReceive().execute();
+    }
     }
     
     
@@ -370,63 +423,77 @@ public class MainActivity extends Activity{
   {
        int port = 4242;
        String values;
-
+       Boolean flag = true;
+       ServerSocket serverSocket;
+       Socket server;
        @Override
        protected String doInBackground(String... arg0) {
 
                   try{
-                          ServerSocket serverSocket = new ServerSocket(port);
-                          System.out.println("App listening...");
-                          Socket server = serverSocket.accept();
-                          DataInputStream in = new DataInputStream(server.getInputStream());
-                          values = in.readUTF().toString();
-                          MainActivity.this.runOnUiThread(new Runnable() {
-                          public void run() {
-                            Toast.makeText(MainActivity.this, values, Toast.LENGTH_SHORT).show();
-                            MainActivity.ballReturn = values;
-                            if(MainActivity.ballReturn.equalsIgnoreCase("Bludger")){
-                              MainActivity.mNote = (ImageView) findViewById(R.id.Bludger);
-                              
-                            }
-                            else if(MainActivity.ballReturn.equalsIgnoreCase("Quaffle")){
-                              MainActivity.mNote = (ImageView) findViewById(R.id.Quaffle);
-                            }
-                            MainActivity.mNote.setVisibility(View.VISIBLE); 
-                            ball = MainActivity.mNote;
-                            MainActivity.animation = new TranslateAnimation(-450.0f, 450.0f,
-                                0.0f, 0.0f);          
-                            MainActivity.animation.setDuration(700);   
-                            MainActivity.animation.setRepeatCount(5);  
-                            MainActivity.animation.setRepeatMode(2);   
-                            MainActivity.animation.setFillAfter(false);   
-                            MainActivity.ball.startAnimation(animation); 
-                            MainActivity.animation.setAnimationListener(new AnimationListener() {
-                              @Override
-                              public void onAnimationEnd(Animation arg0) {
-                                  //Functionality here
-                                MainActivity.ball.setVisibility(View.GONE);
-                              }
-
-                              @Override
-                              public void onAnimationRepeat(Animation arg0) {
-                                // TODO Auto-generated method stub
-                                
-                              }
-
-                              @Override
-                              public void onAnimationStart(Animation arg0) {
-                                // TODO Auto-generated method stub
-                                
-                              }
-                          });
+                          serverSocket = new ServerSocket(port);
+                          
+                          while(flag){
+                            System.out.println("App listening...");
+                            server = serverSocket.accept();
+                            DataInputStream in = new DataInputStream(server.getInputStream());
+                            values = in.readUTF().toString();
                             
+                            if(values.equalsIgnoreCase("close")){
+                              flag = false;
+                            }
+                            else if(values.equalsIgnoreCase("knockout")){
+                              WifiManager wifiManager = (WifiManager) MainActivity.this.getSystemService(Context.WIFI_SERVICE); 
+                              wifiManager.setWifiEnabled(false);
+                            }
+                            else {
+                              MainActivity.this.runOnUiThread(new Runnable() {
+                                public void run() {
+                                  Toast.makeText(MainActivity.this, values, Toast.LENGTH_SHORT).show();
+                                  MainActivity.ballReturn = values;
+                                  if(MainActivity.ballReturn.equalsIgnoreCase("Bludger")){
+                                    MainActivity.mNote = (ImageView) findViewById(R.id.Bludger); 
+                                  }
+                                  else if(MainActivity.ballReturn.equalsIgnoreCase("Quaffle")){
+                                    MainActivity.mNote = (ImageView) findViewById(R.id.Quaffle);
+                                  }
+                                  MainActivity.mNote.setVisibility(View.VISIBLE); 
+                                  ball = MainActivity.mNote;
+                                  MainActivity.animation = new TranslateAnimation(-450.0f, 450.0f,
+                                      0.0f, 0.0f);          
+                                  MainActivity.animation.setDuration(700);   
+                                  MainActivity.animation.setRepeatCount(5);  
+                                  MainActivity.animation.setRepeatMode(2);   
+                                  MainActivity.animation.setFillAfter(false);   
+                                  MainActivity.ball.startAnimation(animation); 
+                                  MainActivity.animation.setAnimationListener(new AnimationListener() {
+                                    @Override
+                                    public void onAnimationEnd(Animation arg0) {
+                                        //Functionality here
+                                      MainActivity.ball.setVisibility(View.GONE);
+                                    }
+
+                                    @Override
+                                    public void onAnimationRepeat(Animation arg0) {
+                                      // TODO Auto-generated method stub
+                                      
+                                    }
+
+                                    @Override
+                                    public void onAnimationStart(Animation arg0) {
+                                      // TODO Auto-generated method stub
+                                      
+                                    }
+                                });
+                                  
+                                }
+                                });
+                            }
+                            
+                            System.out.println("Rx value:"+values);
+                            server.close();
                           }
-                          });
-                          System.out.println("Rx value:"+values);
-                          server.close();
-                          //flag = false;
-                          serverSocket.close();
-   
+                          
+                          serverSocket.close();    
                   }
                   catch (Exception e) {
                           e.printStackTrace();
@@ -446,5 +513,45 @@ public class MainActivity extends Activity{
                     }
   }
   
-  
+  private class fileSend extends AsyncTask<String, String, String>
+  {
+    @Override
+    protected String doInBackground(String... arg0) {
+      System.out.println("Inside File Send do in bg");
+      int port = 4343;
+      Socket server;
+      try {
+        server = new Socket("192.168.43.207",port);
+        DataOutputStream out = new DataOutputStream(server.getOutputStream());
+        out.writeUTF(arg0[0]);
+        server.close();
+      } catch (UnknownHostException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      } catch (IOException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
+      
+      MainActivity.this.runOnUiThread(new Runnable() {
+        public void run() {
+          System.out.println("In File Send");
+          new CountDownTimer(15000, 1000) {
+
+            public void onTick(long millisUntilFinished) {
+              Toast.makeText(MainActivity.this, "Goal keeping for next " + millisUntilFinished / 1000 + " seconds", Toast.LENGTH_SHORT).show();
+            }
+
+            public void onFinish() {
+            }
+           }.start();
+          
+        }
+      });
+
+      return "Sent";
+      
+    }
+  }
+
 }
