@@ -4,7 +4,7 @@
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     android:background="@drawable/cloudbg"
-    >
+    > 
     <ImageView
             android:id="@+id/Quaffle"
             android:layout_width="wrap_content"
@@ -14,7 +14,11 @@
             android:src="@drawable/quaffle_button"
             android:contentDescription="@string/quaffle_text"
             android:visibility="gone"
-            android:layout_centerInParent="true" />
+            android:layout_centerInParent="true"
+            android:adjustViewBounds="true"  
+            android:maxWidth="120dp"  
+            android:maxHeight="120dp"  
+            android:scaleType="fitCenter"  />
     <ImageView
             android:id="@+id/Bludger"
             android:layout_width="wrap_content"
@@ -24,7 +28,12 @@
             android:src="@drawable/bludger_button"
             android:contentDescription="@string/bludger_text"
             android:visibility="gone"
-            android:layout_centerInParent="true" />
+            android:layout_centerInParent="true" 
+            android:adjustViewBounds="true"  
+            android:maxWidth="120dp"  
+            android:maxHeight="120dp"  
+            android:scaleType="fitCenter" />
+    
     <ImageView
             android:id="@+id/Goal"
             android:layout_width="150sp"
@@ -34,6 +43,55 @@
             android:src="@drawable/goal_button"
             android:contentDescription="@string/goal_text"
             android:visibility="gone"
-            android:layout_alignParentBottom = "true"/>
+            android:layout_alignParentBottom = "true"
+            android:layout_alignParentLeft="true"/>
+    
+    <ImageView
+            android:id="@+id/Slytherin"
+            android:layout_width="55sp"
+            android:layout_height="55sp"
+            android:layout_gravity="top"
+            android:gravity="top"
+            android:src="@drawable/slytherin"
+            android:contentDescription="@string/slytherin_text"
+            android:visibility="gone"
+            android:layout_alignParentTop = "true"
+            android:layout_alignParentLeft = "true"/>
+    <ImageView
+            android:id="@+id/Gryffindor"
+            android:layout_width="55sp"
+            android:layout_height="55sp"
+            android:layout_gravity="top"
+            android:gravity="top"
+            android:src="@drawable/gryffindor"
+            android:contentDescription="@string/gryffindor_text"
+            android:visibility="gone"
+            android:layout_below = "@+id/Slytherin"
+            android:layout_alignParentLeft = "true"/>
+   <TextView 
+            android:id="@+id/Sly_score"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" 
+            android:textColor="#FFFFFF"
+            android:textSize="32sp" 
+            android:textStyle="bold"
+            android:singleLine="true" 
+            android:text="@string/slytherin_score"
+            android:layout_toRightOf = "@+id/Slytherin"/>
+   
+    <TextView 
+            android:id="@+id/Gryff_score"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" 
+            android:textColor="#FFFFFF"
+            android:textSize="32sp" 
+            android:textStyle="bold"
+            android:singleLine="true" 
+            android:text="@string/gryffindor_score"
+            android:layout_below = "@+id/Slytherin"
+            android:layout_toRightOf = "@+id/Gryffindor"/>
+    
 
+    
+    
 </RelativeLayout>

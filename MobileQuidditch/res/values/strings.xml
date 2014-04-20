@@ -10,4 +10,8 @@
     <string name="bludger_text">Bludger</string>
     <string name="snitch_text">Snitch</string>
     <string name="goal_text">Goal</string>
+    <string name="slytherin_text">Slytherin</string>
+    <string name="gryffindor_text">Griffindor</string>
+    <string name="slytherin_score">0</string>
+    <string name="gryffindor_score">0</string>
 </resources>

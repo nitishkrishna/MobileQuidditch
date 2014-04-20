@@ -1,6 +1,5 @@
 package myapp.mobilequidditch;
 
-
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -8,7 +7,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
-
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.PendingIntent;
@@ -38,6 +36,7 @@ import android.view.animation.Animation.AnimationListener;
 import android.view.animation.TranslateAnimation;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 public class MainActivity extends Activity{
@@ -67,6 +66,12 @@ public class MainActivity extends Activity{
     findViewById(R.id.Quaffle).setOnClickListener(ballCatcher);
     findViewById(R.id.Goal).setOnClickListener(goalTender);
     findViewById(R.id.Goal).setVisibility(View.VISIBLE);
+    findViewById(R.id.Slytherin).setVisibility(View.VISIBLE);
+    findViewById(R.id.Gryffindor).setVisibility(View.VISIBLE);
+    TextView sly_score = (TextView) findViewById(R.id.Sly_score);
+    TextView gryff_score = (TextView) findViewById(R.id.Gryff_score);
+    sly_score.setText("5");
+    gryff_score.setText("5");
     
     mNote=NULL;
     // Handle all of our received NFC intents in this activity.
@@ -144,9 +149,38 @@ public class MainActivity extends Activity{
         // Write to a tag for as long as the dialog is shown.
         disableNdefExchangeMode();
         enableTagWriteMode();
+
+        String action_msg="";
+        String button_msg="";
+        if(mNote.getContentDescription().toString().equalsIgnoreCase("Quaffle")){
+          action_msg = "Score Goal";
+          button_msg = "trygoal";
+        }
+        else if (mNote.getContentDescription().toString().equalsIgnoreCase("Bludger")){
+          action_msg = "Knock out";
+          button_msg = "knockout";
+        }
         
-        new AlertDialog.Builder(MainActivity.this).setTitle("Initiate transfer?")
-        .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+        final String b_msg = button_msg;
+        new AlertDialog.Builder(MainActivity.this).setTitle("Choose Action")
+        .setPositiveButton(action_msg, new DialogInterface.OnClickListener() {
+          
+            @Override
+            public final void onClick(DialogInterface arg0, int arg1) {
+              mNote.setVisibility(View.GONE); 
+              mNote.setOnClickListener(ballCatcher);
+              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+                new fileSend().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,b_msg);
+                } else {
+                new fileSend().execute();
+                }
+              disableTagWriteMode();
+              enableNdefExchangeMode();
+              mNote = NULL;
+            }
+        })
+        
+        .setNeutralButton("Transfer", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface arg0, int arg1) {
               mNote.setVisibility(View.GONE); 
@@ -158,7 +192,8 @@ public class MainActivity extends Activity{
               mNote = NULL;
             }
         })
-        .setNegativeButton("No", new DialogInterface.OnClickListener() {
+        
+        .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface arg0, int arg1) {
               mNote.setVisibility(View.VISIBLE);
@@ -175,27 +210,12 @@ public class MainActivity extends Activity{
       @Override
       public void onClick(View arg0) {
 
-        System.out.println("In On Click");
+        //System.out.println("In On Click");
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
           new fileSend().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,"goalkeep");
       } else {
           new fileSend().execute("goalkeep");
       }
-        
-         /* new AlertDialog.Builder(MainActivity.this).setTitle("Goal keep?")
-          .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
-              @Override
-              public void onClick(DialogInterface arg0, int arg1) {
-                System.out.println("Going to file send");
-                
-              }
-          })
-          .setNegativeButton("No", new DialogInterface.OnClickListener() {
-              @Override
-              public void onClick(DialogInterface arg0, int arg1) {
-                
-              }
-          }).show();*/
           
       }
       };
@@ -445,10 +465,16 @@ public class MainActivity extends Activity{
                               WifiManager wifiManager = (WifiManager) MainActivity.this.getSystemService(Context.WIFI_SERVICE); 
                               wifiManager.setWifiEnabled(false);
                             }
+                            else if(values.equalsIgnoreCase("goal")){
+                              MainActivity.this.runOnUiThread(new Runnable() {
+                                public void run() {
+                                  Toast.makeText(MainActivity.this, "You scored a goal!", Toast.LENGTH_SHORT).show();
+                                }
+                              });
+                            }
                             else {
                               MainActivity.this.runOnUiThread(new Runnable() {
                                 public void run() {
-                                  Toast.makeText(MainActivity.this, values, Toast.LENGTH_SHORT).show();
                                   MainActivity.ballReturn = values;
                                   if(MainActivity.ballReturn.equalsIgnoreCase("Bludger")){
                                     MainActivity.mNote = (ImageView) findViewById(R.id.Bludger); 
@@ -533,21 +559,23 @@ public class MainActivity extends Activity{
         e.printStackTrace();
       }
       
-      MainActivity.this.runOnUiThread(new Runnable() {
-        public void run() {
-          System.out.println("In File Send");
-          new CountDownTimer(15000, 1000) {
+      if(arg0[0].equalsIgnoreCase("goalkeep")){
+        MainActivity.this.runOnUiThread(new Runnable() {
+          public void run() {
+            System.out.println("In File Send");
+            new CountDownTimer(15000, 1000) {
 
-            public void onTick(long millisUntilFinished) {
-              Toast.makeText(MainActivity.this, "Goal keeping for next " + millisUntilFinished / 1000 + " seconds", Toast.LENGTH_SHORT).show();
-            }
+              public void onTick(long millisUntilFinished) {
+                Toast.makeText(MainActivity.this, "Goal keeping for next " + millisUntilFinished / 1000 + " seconds", Toast.LENGTH_SHORT).show();
+              }
 
-            public void onFinish() {
-            }
-           }.start();
-          
-        }
-      });
+              public void onFinish() {
+              }
+             }.start();
+            
+          }
+        });
+      }
 
       return "Sent";
       
