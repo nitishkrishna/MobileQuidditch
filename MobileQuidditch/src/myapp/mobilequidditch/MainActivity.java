@@ -7,6 +7,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
+import java.util.concurrent.ExecutionException;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.PendingIntent;
@@ -28,6 +29,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Parcelable;
+import android.text.StaticLayout;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
@@ -43,14 +45,16 @@ public class MainActivity extends Activity{
 
   private static final String TAG = "NitishKrishna";
   private static final ImageButton NULL = null;
-  private boolean mResumed = false;
   private boolean mWriteMode = false;
   NfcAdapter mNfcAdapter;
   static ImageView mNote;
   static ImageView ball;
+  boolean haveball;
+  boolean listen_flag;
   static Animation animation;
   static String ballReturn;
-  private static Context mContext;
+  static boolean mResumed;
+  static int netId;
   PendingIntent mNfcPendingIntent;
   IntentFilter[] mWriteTagFilters;
   IntentFilter[] mNdefExchangeFilters;
@@ -58,22 +62,37 @@ public class MainActivity extends Activity{
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
+    
+    //Network Configuration
+    
+    /*WifiManager wifiManager = (WifiManager) MainActivity.this.getSystemService(Context.WIFI_SERVICE); 
+    wifiManager.setWifiEnabled(true);
+    String networkSSID = "skanda";
+    String networkPass = "nitishkrishna";
+    WifiConfiguration conf = new WifiConfiguration();
+    conf.SSID = "\"" + networkSSID + "\""; 
+    conf.preSharedKey  = "\"" + networkPass + "\"";
+    conf.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.TKIP);
+    conf.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.CCMP);
+    conf.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.WPA_PSK);
+    conf.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.TKIP);
+    conf.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.CCMP);
+    conf.allowedProtocols.set(WifiConfiguration.Protocol.RSN);
+    netId = wifiManager.addNetwork(conf);*/
+
+    //Set Initial Game State
+    
     setContentView(R.layout.activity_main);
-    mContext = MainActivity.this.getApplicationContext();
     System.out.println("In On Create");
     mNfcAdapter = NfcAdapter.getDefaultAdapter(this);
-    findViewById(R.id.Bludger).setOnClickListener(ballCatcher);
-    findViewById(R.id.Quaffle).setOnClickListener(ballCatcher);
-    findViewById(R.id.Goal).setOnClickListener(goalTender);
-    findViewById(R.id.Goal).setVisibility(View.VISIBLE);
-    findViewById(R.id.Slytherin).setVisibility(View.VISIBLE);
-    findViewById(R.id.Gryffindor).setVisibility(View.VISIBLE);
     TextView sly_score = (TextView) findViewById(R.id.Sly_score);
     TextView gryff_score = (TextView) findViewById(R.id.Gryff_score);
-    sly_score.setText("5");
-    gryff_score.setText("5");
-    
+    sly_score.setVisibility(View.GONE);
+    gryff_score.setVisibility(View.GONE);
+    haveball = false;
+    listen_flag = false;
     mNote=NULL;
+    
     // Handle all of our received NFC intents in this activity.
     mNfcPendingIntent = PendingIntent.getActivity(this, 0,
             new Intent(this, getClass()).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), 0);
@@ -88,6 +107,44 @@ public class MainActivity extends Activity{
     // Intent filters for writing to a tag
     IntentFilter tagDetected = new IntentFilter(NfcAdapter.ACTION_TAG_DISCOVERED);
     mWriteTagFilters = new IntentFilter[] { tagDetected };
+    
+    
+    //Send hello to connect to server
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+      new fileSend().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,"hello");
+    } else {
+      new fileSend().execute("hello");
+    }
+    String strt_cmd="";
+    //Wait for game to start - meanwhile receive game set up messages
+   /*
+      if(listen_flag ==false){
+        try {
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+            strt_cmd = new fileReceive().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR).get();
+        } else {
+            strt_cmd = new fileReceive().execute().get();
+        }
+        } catch (InterruptedException e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+        } catch (ExecutionException e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+        }
+      }
+*/
+    //Game starting - final game state set up
+    findViewById(R.id.Goal).setVisibility(View.VISIBLE);
+    findViewById(R.id.Slytherin).setVisibility(View.VISIBLE);
+    findViewById(R.id.Gryffindor).setVisibility(View.VISIBLE);
+    sly_score.setVisibility(View.VISIBLE);
+    gryff_score.setVisibility(View.VISIBLE);
+    findViewById(R.id.Bludger).setOnClickListener(ballCatcher);
+    findViewById(R.id.Quaffle).setOnClickListener(ballCatcher);
+    findViewById(R.id.Goal).setOnClickListener(goalTender);
+    
+    
   }
 
   @Override
@@ -167,7 +224,8 @@ public class MainActivity extends Activity{
           
             @Override
             public final void onClick(DialogInterface arg0, int arg1) {
-              mNote.setVisibility(View.GONE); 
+              mNote.setVisibility(View.GONE);
+              haveball = false;
               mNote.setOnClickListener(ballCatcher);
               if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
                 new fileSend().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,b_msg);
@@ -184,6 +242,7 @@ public class MainActivity extends Activity{
             @Override
             public void onClick(DialogInterface arg0, int arg1) {
               mNote.setVisibility(View.GONE); 
+              haveball = false;
               mNote.setOnClickListener(ballCatcher);
               new AlertDialog.Builder(MainActivity.this).setTitle("Touch tag to write")
               .create().show();
@@ -199,6 +258,7 @@ public class MainActivity extends Activity{
               mNote.setVisibility(View.VISIBLE);
               disableTagWriteMode();
               enableNdefExchangeMode();
+              haveball = true;
             }
         }).show();
         
@@ -225,6 +285,7 @@ public class MainActivity extends Activity{
       @Override
       public void onClick(View arg0) {
         
+        haveball = true;
         ball.clearAnimation(); 
         mNote = (ImageView)arg0;
         mNote.setOnClickListener(mTagWriter);
@@ -236,6 +297,11 @@ public class MainActivity extends Activity{
                 mNote.setVisibility(View.VISIBLE);
             }
         }).create().show();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+          new fileSend().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,"caught"+mNote.getContentDescription().toString());
+        } else {
+          new fileSend().execute("caught"+mNote.getContentDescription().toString());
+        }
       }
       };
     
@@ -264,7 +330,7 @@ public class MainActivity extends Activity{
                     conf.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.TKIP);
                     conf.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.CCMP);
                     conf.allowedProtocols.set(WifiConfiguration.Protocol.RSN);
-                    wifiManager.addNetwork(conf);
+                    netId = wifiManager.addNetwork(conf);
                   }
                   else {
                     System.out.println("Setting note body as "+body);
@@ -322,7 +388,6 @@ public class MainActivity extends Activity{
   NdefMessage[] getNdefMessages(Intent intent) {
     // Parse the intent
     NdefMessage[] msgs = null;
-
     System.out.println("In getNdefMessages");
     String action = intent.getAction();
     if (NfcAdapter.ACTION_TAG_DISCOVERED.equals(action)
@@ -357,7 +422,7 @@ public class MainActivity extends Activity{
     mNfcAdapter.setNdefPushMessage(getNoteAsNdef(), MainActivity.this);
     mNfcAdapter.enableForegroundDispatch(this, mNfcPendingIntent, mNdefExchangeFilters, null);
     
-    if(mNote == NULL){
+    if(mNote == NULL && listen_flag == false){
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
         new fileReceive().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     } else {
@@ -442,10 +507,11 @@ public class MainActivity extends Activity{
   private class fileReceive extends AsyncTask<String, String, String>
   {
        int port = 4242;
-       String values;
        Boolean flag = true;
        ServerSocket serverSocket;
        Socket server;
+       String values;
+       String score;
        @Override
        protected String doInBackground(String... arg0) {
 
@@ -453,19 +519,61 @@ public class MainActivity extends Activity{
                           serverSocket = new ServerSocket(port);
                           
                           while(flag){
+                            MainActivity.this.listen_flag=true;
                             System.out.println("App listening...");
                             server = serverSocket.accept();
                             DataInputStream in = new DataInputStream(server.getInputStream());
                             values = in.readUTF().toString();
+                            System.out.println("Received: "+values);
                             
-                            if(values.equalsIgnoreCase("close")){
+                            if (values.equalsIgnoreCase("start-1")){
+                              System.out.println("Comes to start1 - " + values);
+                              MainActivity.this.runOnUiThread(new Runnable() {
+                                public void run() {
+                                  Toast.makeText(MainActivity.this, "You joined Team Syltherin! Start Game!", Toast.LENGTH_SHORT).show();
+                                }
+                              });
+                              
+                            }
+                            else if(values.equalsIgnoreCase("start-2")){
+                              System.out.println("Comes to start2 - " + values);
+                              MainActivity.this.runOnUiThread(new Runnable() {
+                                public void run() {
+                                  Toast.makeText(MainActivity.this, "You joined Team Gryffindor! Start Game!", Toast.LENGTH_SHORT).show();
+                                }
+                              });
+                            }
+                            else if(values.contains(":")){
+                              score = values;
+                              System.out.println("Comes to contains - " + values);
+                              System.out.println("Values in : is : "+values);
+                              
+                              MainActivity.this.runOnUiThread(new Runnable() {
+                                public void run() {
+                                  Toast.makeText(MainActivity.this, "Incoming Score!", Toast.LENGTH_SHORT).show();
+                                  TextView sly_score = (TextView) MainActivity.this.findViewById(R.id.Sly_score);
+                                  TextView gryff_score = (TextView) MainActivity.this.findViewById(R.id.Gryff_score);
+                                  sly_score.setText(score.substring(0, score.indexOf(":")));
+                                  gryff_score.setText(score.substring(score.indexOf(":")+1, score.length()));
+                                  sly_score.setVisibility(View.VISIBLE);
+                                  gryff_score.setVisibility(View.VISIBLE);
+                                }
+                              });
+                             
+                            }
+                            else if(values.equalsIgnoreCase("close")){
+                              System.out.println("Comes to close- " + values);
                               flag = false;
                             }
                             else if(values.equalsIgnoreCase("knockout")){
+                              System.out.println("Comes to knockout - " + values);
                               WifiManager wifiManager = (WifiManager) MainActivity.this.getSystemService(Context.WIFI_SERVICE); 
                               wifiManager.setWifiEnabled(false);
+                              wifiManager.removeNetwork(netId);
+                              wifiManager.saveConfiguration();
                             }
                             else if(values.equalsIgnoreCase("goal")){
+                              System.out.println("Comes to goal - " + values);
                               MainActivity.this.runOnUiThread(new Runnable() {
                                 public void run() {
                                   Toast.makeText(MainActivity.this, "You scored a goal!", Toast.LENGTH_SHORT).show();
@@ -473,6 +581,7 @@ public class MainActivity extends Activity{
                               });
                             }
                             else {
+                              System.out.println("Comes to default - " + values);
                               MainActivity.this.runOnUiThread(new Runnable() {
                                 public void run() {
                                   MainActivity.ballReturn = values;
@@ -495,7 +604,16 @@ public class MainActivity extends Activity{
                                     @Override
                                     public void onAnimationEnd(Animation arg0) {
                                         //Functionality here
-                                      MainActivity.ball.setVisibility(View.GONE);
+                                      
+                                      if(!MainActivity.this.haveball){
+                                        MainActivity.ball.setVisibility(View.GONE);
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+                                          new fileSend().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,"missed"+values);
+                                        } else {
+                                          new fileSend().execute("missed"+values);
+                                        }
+                                      }
+                                      
                                     }
 
                                     @Override
@@ -519,6 +637,7 @@ public class MainActivity extends Activity{
                             server.close();
                           }
                           
+                          MainActivity.this.listen_flag=false; 
                           serverSocket.close();    
                   }
                   catch (Exception e) {

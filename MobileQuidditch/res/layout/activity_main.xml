@@ -90,8 +90,5 @@
             android:text="@string/gryffindor_score"
             android:layout_below = "@+id/Slytherin"
             android:layout_toRightOf = "@+id/Gryffindor"/>
-    
 
-    
-    
 </RelativeLayout>
