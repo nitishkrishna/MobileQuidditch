@@ -7,7 +7,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
-import java.util.concurrent.ExecutionException;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.PendingIntent;
@@ -16,6 +15,8 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.IntentFilter.MalformedMimeTypeException;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiManager;
 import android.nfc.NdefMessage;
@@ -28,8 +29,8 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
+import android.os.Handler;
 import android.os.Parcelable;
-import android.text.StaticLayout;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
@@ -52,12 +53,19 @@ public class MainActivity extends Activity{
   boolean haveball;
   boolean listen_flag;
   static Animation animation;
+  int rssiValue;
   static String ballReturn;
   static boolean mResumed;
   static int netId;
+  WifiManager wifiManager;
+  CountDownTimer cTimer = null;
+  ConnectivityManager cm;
+  NetworkInfo netInfo;
   PendingIntent mNfcPendingIntent;
   IntentFilter[] mWriteTagFilters;
   IntentFilter[] mNdefExchangeFilters;
+  CountDownTimer tempTimer;
+  boolean gk=false;
   
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -115,25 +123,11 @@ public class MainActivity extends Activity{
     } else {
       new fileSend().execute("hello");
     }
-    String strt_cmd="";
-    //Wait for game to start - meanwhile receive game set up messages
-   /*
-      if(listen_flag ==false){
-        try {
-          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
-            strt_cmd = new fileReceive().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR).get();
-        } else {
-            strt_cmd = new fileReceive().execute().get();
-        }
-        } catch (InterruptedException e) {
-          // TODO Auto-generated catch block
-          e.printStackTrace();
-        } catch (ExecutionException e) {
-          // TODO Auto-generated catch block
-          e.printStackTrace();
-        }
-      }
-*/
+    
+
+    wifiManager = (WifiManager) MainActivity.this.getSystemService(Context.WIFI_SERVICE); 
+    rssiValue = wifiManager.getConnectionInfo().getRssi();
+    System.out.println("RSSI Value: "+ String.valueOf(rssiValue));
     //Game starting - final game state set up
     findViewById(R.id.Goal).setVisibility(View.VISIBLE);
     findViewById(R.id.Slytherin).setVisibility(View.VISIBLE);
@@ -143,8 +137,7 @@ public class MainActivity extends Activity{
     findViewById(R.id.Bludger).setOnClickListener(ballCatcher);
     findViewById(R.id.Quaffle).setOnClickListener(ballCatcher);
     findViewById(R.id.Goal).setOnClickListener(goalTender);
-    
-    
+ 
   }
 
   @Override
@@ -152,6 +145,7 @@ public class MainActivity extends Activity{
     super.onResume();
     mResumed = true;
     System.out.println("In On Resume");
+    
     // Sticky notes received from Android
     if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(getIntent().getAction())) {
         NdefMessage[] messages = getNdefMessages(getIntent());
@@ -215,7 +209,7 @@ public class MainActivity extends Activity{
         }
         else if (mNote.getContentDescription().toString().equalsIgnoreCase("Bludger")){
           action_msg = "Knock out";
-          button_msg = "knockout";
+          button_msg = "tryknockout";
         }
         
         final String b_msg = button_msg;
@@ -230,7 +224,7 @@ public class MainActivity extends Activity{
               if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
                 new fileSend().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,b_msg);
                 } else {
-                new fileSend().execute();
+                new fileSend().execute(b_msg);
                 }
               disableTagWriteMode();
               enableNdefExchangeMode();
@@ -248,6 +242,11 @@ public class MainActivity extends Activity{
               .create().show();
               disableTagWriteMode();
               enableNdefExchangeMode();
+              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+                new fileSend().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,"trans"+mNote.getContentDescription().toString());
+                } else {
+                new fileSend().execute("trans"+mNote.getContentDescription().toString());
+                }
               mNote = NULL;
             }
         })
@@ -271,12 +270,17 @@ public class MainActivity extends Activity{
       public void onClick(View arg0) {
 
         //System.out.println("In On Click");
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
-          new fileSend().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,"goalkeep");
-      } else {
-          new fileSend().execute("goalkeep");
-      }
-          
+        if(mNote==NULL){
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+            new fileSend().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,"goalkeep");
+        } else {
+            new fileSend().execute("goalkeep");
+        }
+        }
+        else {
+          toast("Drop ball to goalkeep!");
+        }
+ 
       }
       };
     
@@ -286,8 +290,14 @@ public class MainActivity extends Activity{
       public void onClick(View arg0) {
         
         haveball = true;
+        gk=false;
         ball.clearAnimation(); 
         mNote = (ImageView)arg0;
+        if(cTimer!=null){
+          cTimer.cancel();
+          cTimer=null;
+          gk=true;
+        }
         mNote.setOnClickListener(mTagWriter);
         mNote.setVisibility(View.VISIBLE);
         new AlertDialog.Builder(MainActivity.this).setTitle("You caught the "+mNote.getContentDescription().toString()+"!")
@@ -302,12 +312,16 @@ public class MainActivity extends Activity{
         } else {
           new fileSend().execute("caught"+mNote.getContentDescription().toString());
         }
+        if(gk){
+          toast("You saved a goal!");
+          gk=false;
+        }
       }
       };
     
     private void promptForContent(final NdefMessage msg) {
       
-      new AlertDialog.Builder(this).setTitle("Replace current content?")
+      new AlertDialog.Builder(this).setTitle("Receive Ball/Revive?")
           .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
               @Override
               public void onClick(DialogInterface arg0, int arg1) {
@@ -317,10 +331,10 @@ public class MainActivity extends Activity{
                   String body = new String(msg.getRecords()[0].getPayload());
                   
                   if(body.equalsIgnoreCase("Revive")){
-                    WifiManager wifiManager = (WifiManager) MainActivity.this.getSystemService(Context.WIFI_SERVICE); 
+                    wifiManager = (WifiManager) MainActivity.this.getSystemService(Context.WIFI_SERVICE); 
                     wifiManager.setWifiEnabled(true);
-                    String networkSSID = "skanda";
-                    String networkPass = "nitishkrishna";
+                    String networkSSID = "SOUP BOY NETWORK";
+                    String networkPass = "Thuvakudiboys";
                     WifiConfiguration conf = new WifiConfiguration();
                     conf.SSID = "\"" + networkSSID + "\""; 
                     conf.preSharedKey  = "\"" + networkPass + "\"";
@@ -331,10 +345,51 @@ public class MainActivity extends Activity{
                     conf.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.CCMP);
                     conf.allowedProtocols.set(WifiConfiguration.Protocol.RSN);
                     netId = wifiManager.addNetwork(conf);
+                        
+                    cm = (ConnectivityManager) MainActivity.this.getSystemService(Context.CONNECTIVITY_SERVICE);
+                    netInfo = cm.getActiveNetworkInfo();
+                    
+                    tempTimer = new CountDownTimer(10000, 1000) {
+
+                      public void onTick(long millisUntilFinished) {
+                        final Toast t = Toast.makeText(MainActivity.this, "Waiting for Wifi: " + millisUntilFinished / 1000 + " seconds", Toast.LENGTH_SHORT);
+                        t.show();
+                        Handler handler = new Handler();
+                        handler.postDelayed(new Runnable() {
+                           @Override
+                           public void run() {
+                               t.cancel(); 
+                           }
+                    }, 999);
+                        if(MainActivity.this.netInfo != null && MainActivity.this.netInfo.getState() == NetworkInfo.State.CONNECTED) {
+                          tempTimer.cancel();
+                          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+                            new fileSend().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,"reconnect");
+                          } else {
+                            new fileSend().execute("reconnect");
+                          }
+                        }
+                      }
+                      
+                      public void onFinish() {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+                          new fileSend().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,"reconnect");
+                        } else {
+                          new fileSend().execute("reconnect");
+                        }
+                        tempTimer = null;
+                      }
+                     }.start();      
+                    
                   }
-                  else {
+                  else if(!body.equalsIgnoreCase("Nothing here")){
                     System.out.println("Setting note body as "+body);
                     setNoteBody(body);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+                      new fileSend().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,"have"+mNote.getContentDescription().toString());
+                    } else {
+                      new fileSend().execute("have"+mNote.getContentDescription().toString());
+                    }
                   }
                   
                   if(mNote == NULL){
@@ -566,11 +621,17 @@ public class MainActivity extends Activity{
                               flag = false;
                             }
                             else if(values.equalsIgnoreCase("knockout")){
+                              if(cTimer!=null){
+                                cTimer.cancel();
+                              }
+                              
                               System.out.println("Comes to knockout - " + values);
-                              WifiManager wifiManager = (WifiManager) MainActivity.this.getSystemService(Context.WIFI_SERVICE); 
-                              wifiManager.setWifiEnabled(false);
-                              wifiManager.removeNetwork(netId);
-                              wifiManager.saveConfiguration();
+                              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+                                new fileSend().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,"knockedout");
+                              } else {
+                                new fileSend().execute("knockedout");
+                              }
+                              
                             }
                             else if(values.equalsIgnoreCase("goal")){
                               System.out.println("Comes to goal - " + values);
@@ -580,7 +641,18 @@ public class MainActivity extends Activity{
                                 }
                               });
                             }
+                            else if(values.equalsIgnoreCase("knockoutsuccess")){
+                              MainActivity.this.runOnUiThread(new Runnable() {
+                                public void run() {
+                                  Toast.makeText(MainActivity.this, "You knockedout the opponent!", Toast.LENGTH_SHORT).show();
+                                }
+                              });
+                            }
                             else {
+                              gk=false;
+                              if(cTimer!=null){
+                                gk=true;
+                              }
                               System.out.println("Comes to default - " + values);
                               MainActivity.this.runOnUiThread(new Runnable() {
                                 public void run() {
@@ -611,6 +683,9 @@ public class MainActivity extends Activity{
                                           new fileSend().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,"missed"+values);
                                         } else {
                                           new fileSend().execute("missed"+values);
+                                        }
+                                        if(gk==true){
+                                          Toast.makeText(MainActivity.this, "You didn't stop the goal!", Toast.LENGTH_SHORT).show();
                                         }
                                       }
                                       
@@ -665,10 +740,13 @@ public class MainActivity extends Activity{
       System.out.println("Inside File Send do in bg");
       int port = 4343;
       Socket server;
+
       try {
-        server = new Socket("192.168.43.207",port);
+        server = new Socket("192.168.0.34",port);
         DataOutputStream out = new DataOutputStream(server.getOutputStream());
-        out.writeUTF(arg0[0]);
+        rssiValue = wifiManager.getConnectionInfo().getRssi();
+        out.writeUTF(arg0[0]+";"+String.valueOf(rssiValue));
+        System.out.println("RSSI Value: "+ String.valueOf(rssiValue));
         server.close();
       } catch (UnknownHostException e) {
         // TODO Auto-generated catch block
@@ -679,21 +757,41 @@ public class MainActivity extends Activity{
       }
       
       if(arg0[0].equalsIgnoreCase("goalkeep")){
+        MainActivity.this.findViewById(R.id.Goal).setOnClickListener(null);
+        MainActivity.this.findViewById(R.id.Quaffle).setOnClickListener(ballCatcher);
+        MainActivity.this.findViewById(R.id.Bludger).setOnClickListener(ballCatcher);
         MainActivity.this.runOnUiThread(new Runnable() {
           public void run() {
             System.out.println("In File Send");
-            new CountDownTimer(15000, 1000) {
+            cTimer = new CountDownTimer(15000, 1000) {
 
               public void onTick(long millisUntilFinished) {
-                Toast.makeText(MainActivity.this, "Goal keeping for next " + millisUntilFinished / 1000 + " seconds", Toast.LENGTH_SHORT).show();
+                final Toast t = Toast.makeText(MainActivity.this, "Goal keeping for next " + millisUntilFinished / 1000 + " seconds", Toast.LENGTH_SHORT);
+                t.show();
+                Handler handler = new Handler();
+                handler.postDelayed(new Runnable() {
+                   @Override
+                   public void run() {
+                       t.cancel(); 
+                   }
+            }, 999);
               }
-
+              
               public void onFinish() {
+                MainActivity.this.findViewById(R.id.Goal).setOnClickListener(goalTender);
+                cTimer = null;
               }
              }.start();
             
+             
           }
         });
+      }
+      else if(arg0[0].equalsIgnoreCase("knockedout")){
+        wifiManager = (WifiManager) MainActivity.this.getSystemService(Context.WIFI_SERVICE); 
+        wifiManager.setWifiEnabled(false);
+        wifiManager.removeNetwork(netId);
+        wifiManager.saveConfiguration();
       }
 
       return "Sent";
