@@ -66,6 +66,7 @@ public class MainActivity extends Activity{
   IntentFilter[] mNdefExchangeFilters;
   CountDownTimer tempTimer;
   boolean gk=false;
+  Handler handler;
   
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -221,6 +222,7 @@ public class MainActivity extends Activity{
               mNote.setVisibility(View.GONE);
               haveball = false;
               mNote.setOnClickListener(ballCatcher);
+              findViewById(R.id.Goal).setOnClickListener(goalTender);
               if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
                 new fileSend().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,b_msg);
                 } else {
@@ -238,6 +240,7 @@ public class MainActivity extends Activity{
               mNote.setVisibility(View.GONE); 
               haveball = false;
               mNote.setOnClickListener(ballCatcher);
+              findViewById(R.id.Goal).setOnClickListener(goalTender);
               new AlertDialog.Builder(MainActivity.this).setTitle("Touch tag to write")
               .create().show();
               disableTagWriteMode();
@@ -269,13 +272,16 @@ public class MainActivity extends Activity{
       @Override
       public void onClick(View arg0) {
 
-        //System.out.println("In On Click");
+        System.out.println("In On Click of Goaltender");
         if(mNote==NULL){
           if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
             new fileSend().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,"goalkeep");
         } else {
             new fileSend().execute("goalkeep");
         }
+        }
+        else if(MainActivity.this.cTimer!=null){
+          toast("Already goalkeeping!");
         }
         else {
           toast("Drop ball to goalkeep!");
@@ -345,44 +351,21 @@ public class MainActivity extends Activity{
                     conf.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.CCMP);
                     conf.allowedProtocols.set(WifiConfiguration.Protocol.RSN);
                     netId = wifiManager.addNetwork(conf);
-                        
-                    cm = (ConnectivityManager) MainActivity.this.getSystemService(Context.CONNECTIVITY_SERVICE);
-                    netInfo = cm.getActiveNetworkInfo();
+                    findViewById(R.id.Goal).setOnClickListener(goalTender);    
                     
-                    tempTimer = new CountDownTimer(10000, 1000) {
-
-                      public void onTick(long millisUntilFinished) {
-                        final Toast t = Toast.makeText(MainActivity.this, "Waiting for Wifi: " + millisUntilFinished / 1000 + " seconds", Toast.LENGTH_SHORT);
-                        t.show();
-                        Handler handler = new Handler();
-                        handler.postDelayed(new Runnable() {
-                           @Override
-                           public void run() {
-                               t.cancel(); 
-                           }
-                    }, 999);
-                        if(MainActivity.this.netInfo != null && MainActivity.this.netInfo.getState() == NetworkInfo.State.CONNECTED) {
-                          tempTimer.cancel();
-                          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
-                            new fileSend().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,"reconnect");
-                          } else {
-                            new fileSend().execute("reconnect");
-                          }
-                        }
-                      }
-                      
-                      public void onFinish() {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
-                          new fileSend().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,"reconnect");
-                        } else {
-                          new fileSend().execute("reconnect");
-                        }
-                        tempTimer = null;
-                      }
-                     }.start();      
+                    //Put recontimer here
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+                      new reconTimer().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+                    } else {
+                      new reconTimer().execute();
+                    }
                     
                   }
                   else if(!body.equalsIgnoreCase("Nothing here")){
+                    if(cTimer!=null){
+                      cTimer.cancel();
+                      cTimer=null;
+                    }
                     System.out.println("Setting note body as "+body);
                     setNoteBody(body);
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
@@ -396,6 +379,7 @@ public class MainActivity extends Activity{
                     System.out.println("mNote set as Null");
                   }
                   else {
+                    findViewById(R.id.Goal).setOnClickListener(goalTender);
                     System.out.println("mNote set as " + mNote.getContentDescription().toString());
                     mNote.setOnClickListener(mTagWriter);
                   }
@@ -429,6 +413,7 @@ public class MainActivity extends Activity{
     }
     else {
       textBytes = "Nothing here".getBytes();
+      findViewById(R.id.Goal).setOnClickListener(goalTender);
       System.out.println("TextBytes set:" + "Nothing here");
     }
       
@@ -558,6 +543,51 @@ public class MainActivity extends Activity{
     Toast.makeText(this, text, Toast.LENGTH_SHORT).show();
     }
   
+  private class reconTimer extends AsyncTask<String, String, String>
+  {
+
+    @Override
+    protected String doInBackground(String... arg0) {
+      MainActivity.this.cm = (ConnectivityManager) MainActivity.this.getSystemService(Context.CONNECTIVITY_SERVICE);
+      MainActivity.this.netInfo = cm.getActiveNetworkInfo();
+      MainActivity.this.runOnUiThread(new Runnable() {
+        public void run() {
+          System.out.println("In File Send");
+          MainActivity.this.tempTimer = new CountDownTimer(12000, 1000) {
+
+            public void onTick(long millisUntilFinished) {
+              final Toast t = Toast.makeText(MainActivity.this, "Waiting for WiFi " + millisUntilFinished / 1000 + " seconds", Toast.LENGTH_SHORT);
+              t.show();
+              handler = new Handler();
+              handler.postDelayed(new Runnable() {
+                 @Override
+                 public void run() {
+                     t.cancel(); 
+                 }
+          }, 999);
+            }
+            
+            public void onFinish() {
+              MainActivity.this.tempTimer = null;
+              System.out.println("Sending the reconnect from here");
+              if(MainActivity.this.netInfo != null && MainActivity.this.netInfo.getState() == NetworkInfo.State.CONNECTED) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+                  new fileSend().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,"reconnect");
+                } else {
+                  new fileSend().execute("reconnect");
+                }
+              }
+            }
+           }.start();
+         
+        }
+      });
+           
+      return null;
+    }
+    
+    
+  }
   
   private class fileReceive extends AsyncTask<String, String, String>
   {
@@ -621,10 +651,15 @@ public class MainActivity extends Activity{
                               flag = false;
                             }
                             else if(values.equalsIgnoreCase("knockout")){
-                              if(cTimer!=null){
-                                cTimer.cancel();
+                              if(MainActivity.this.cTimer!=null){
+                                MainActivity.this.cTimer.cancel();
+                                MainActivity.this.cTimer=null;
                               }
-                              
+                              MainActivity.this.findViewById(R.id.Goal).setOnClickListener(goalTender);
+                              if(mNote!=NULL){
+                                mNote.setVisibility(View.GONE);
+                                mNote=NULL;
+                              }
                               System.out.println("Comes to knockout - " + values);
                               if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
                                 new fileSend().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,"knockedout");
@@ -645,6 +680,13 @@ public class MainActivity extends Activity{
                               MainActivity.this.runOnUiThread(new Runnable() {
                                 public void run() {
                                   Toast.makeText(MainActivity.this, "You knockedout the opponent!", Toast.LENGTH_SHORT).show();
+                                }
+                              });
+                            }
+                            else if(values.equalsIgnoreCase("missedgoal")){
+                              MainActivity.this.runOnUiThread(new Runnable() {
+                                public void run() {
+                                  Toast.makeText(MainActivity.this, "You missed the goal!", Toast.LENGTH_SHORT).show();
                                 }
                               });
                             }
@@ -740,7 +782,6 @@ public class MainActivity extends Activity{
       System.out.println("Inside File Send do in bg");
       int port = 4343;
       Socket server;
-
       try {
         server = new Socket("192.168.0.34",port);
         DataOutputStream out = new DataOutputStream(server.getOutputStream());
@@ -757,18 +798,17 @@ public class MainActivity extends Activity{
       }
       
       if(arg0[0].equalsIgnoreCase("goalkeep")){
-        MainActivity.this.findViewById(R.id.Goal).setOnClickListener(null);
         MainActivity.this.findViewById(R.id.Quaffle).setOnClickListener(ballCatcher);
         MainActivity.this.findViewById(R.id.Bludger).setOnClickListener(ballCatcher);
         MainActivity.this.runOnUiThread(new Runnable() {
           public void run() {
             System.out.println("In File Send");
-            cTimer = new CountDownTimer(15000, 1000) {
+            MainActivity.this.cTimer = new CountDownTimer(15000, 1000) {
 
               public void onTick(long millisUntilFinished) {
                 final Toast t = Toast.makeText(MainActivity.this, "Goal keeping for next " + millisUntilFinished / 1000 + " seconds", Toast.LENGTH_SHORT);
                 t.show();
-                Handler handler = new Handler();
+                handler = new Handler();
                 handler.postDelayed(new Runnable() {
                    @Override
                    public void run() {
@@ -779,7 +819,7 @@ public class MainActivity extends Activity{
               
               public void onFinish() {
                 MainActivity.this.findViewById(R.id.Goal).setOnClickListener(goalTender);
-                cTimer = null;
+                MainActivity.this.cTimer = null;
               }
              }.start();
             
@@ -793,6 +833,7 @@ public class MainActivity extends Activity{
         wifiManager.removeNetwork(netId);
         wifiManager.saveConfiguration();
       }
+      
 
       return "Sent";
       
