@@ -136,6 +136,7 @@ public class MainActivity extends Activity{
     sly_score.setVisibility(View.VISIBLE);
     gryff_score.setVisibility(View.VISIBLE);
     findViewById(R.id.Bludger).setOnClickListener(ballCatcher);
+    findViewById(R.id.Snitch).setOnClickListener(ballCatcher);
     findViewById(R.id.Quaffle).setOnClickListener(ballCatcher);
     findViewById(R.id.Goal).setOnClickListener(goalTender);
  
@@ -230,7 +231,7 @@ public class MainActivity extends Activity{
                 }
               disableTagWriteMode();
               enableNdefExchangeMode();
-              mNote = NULL;
+              mNote=NULL;
             }
         })
         
@@ -250,7 +251,7 @@ public class MainActivity extends Activity{
                 } else {
                 new fileSend().execute("trans"+mNote.getContentDescription().toString());
                 }
-              mNote = NULL;
+              mNote=NULL;
             }
         })
         
@@ -284,7 +285,7 @@ public class MainActivity extends Activity{
           toast("Already goalkeeping!");
         }
         else {
-          toast("Drop ball to goalkeep!");
+          toast("Drop ball to goalkeep! "+mNote.getContentDescription().toString());
         }
  
       }
@@ -296,7 +297,6 @@ public class MainActivity extends Activity{
       public void onClick(View arg0) {
         
         haveball = true;
-        gk=false;
         ball.clearAnimation(); 
         mNote = (ImageView)arg0;
         if(cTimer!=null){
@@ -654,6 +654,7 @@ public class MainActivity extends Activity{
                               if(MainActivity.this.cTimer!=null){
                                 MainActivity.this.cTimer.cancel();
                                 MainActivity.this.cTimer=null;
+                                gk=false;
                               }
                               MainActivity.this.findViewById(R.id.Goal).setOnClickListener(goalTender);
                               if(mNote!=NULL){
@@ -705,13 +706,31 @@ public class MainActivity extends Activity{
                                   else if(MainActivity.ballReturn.equalsIgnoreCase("Quaffle")){
                                     MainActivity.mNote = (ImageView) findViewById(R.id.Quaffle);
                                   }
+                                  else if(MainActivity.ballReturn.equalsIgnoreCase("Snitch")){
+                                    MainActivity.mNote = (ImageView) findViewById(R.id.Snitch);
+                                  }
                                   MainActivity.mNote.setVisibility(View.VISIBLE); 
                                   ball = MainActivity.mNote;
                                   MainActivity.animation = new TranslateAnimation(-450.0f, 450.0f,
-                                      0.0f, 0.0f);          
-                                  MainActivity.animation.setDuration(700);   
-                                  MainActivity.animation.setRepeatCount(5);  
-                                  MainActivity.animation.setRepeatMode(2);   
+                                      0.0f, 0.0f);         
+                                  
+                                  if(gk){
+                                    MainActivity.animation.setDuration(400);   
+                                    MainActivity.animation.setRepeatCount(3);  
+                                    MainActivity.animation.setRepeatMode(2);
+                                  }
+                                  else if(values.equalsIgnoreCase("Snitch")){
+                                    MainActivity.animation.setDuration(300);   
+                                    MainActivity.animation.setRepeatCount(2);  
+                                    MainActivity.animation.setRepeatMode(2);
+                                  }
+                                  else{
+                                    MainActivity.animation.setDuration(700);   
+                                    MainActivity.animation.setRepeatCount(5);  
+                                    MainActivity.animation.setRepeatMode(2);
+                                  }
+                                   
+                                  
                                   MainActivity.animation.setFillAfter(false);   
                                   MainActivity.ball.startAnimation(animation); 
                                   MainActivity.animation.setAnimationListener(new AnimationListener() {
@@ -721,6 +740,7 @@ public class MainActivity extends Activity{
                                       
                                       if(!MainActivity.this.haveball){
                                         MainActivity.ball.setVisibility(View.GONE);
+                                        mNote=NULL;
                                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
                                           new fileSend().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,"missed"+values);
                                         } else {
@@ -783,7 +803,7 @@ public class MainActivity extends Activity{
       int port = 4343;
       Socket server;
       try {
-        server = new Socket("192.168.0.34",port);
+        server = new Socket("192.168.88.254",port);
         DataOutputStream out = new DataOutputStream(server.getOutputStream());
         rssiValue = wifiManager.getConnectionInfo().getRssi();
         out.writeUTF(arg0[0]+";"+String.valueOf(rssiValue));
@@ -803,6 +823,7 @@ public class MainActivity extends Activity{
         MainActivity.this.runOnUiThread(new Runnable() {
           public void run() {
             System.out.println("In File Send");
+            MainActivity.this.gk=true;
             MainActivity.this.cTimer = new CountDownTimer(15000, 1000) {
 
               public void onTick(long millisUntilFinished) {
@@ -820,6 +841,11 @@ public class MainActivity extends Activity{
               public void onFinish() {
                 MainActivity.this.findViewById(R.id.Goal).setOnClickListener(goalTender);
                 MainActivity.this.cTimer = null;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+                  new fileSend().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,"timerover");
+                } else {
+                  new fileSend().execute("timerover");
+                }
               }
              }.start();
             
