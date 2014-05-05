@@ -25,7 +25,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:gravity="center"
-            android:src="@drawable/bludger_button"
+            android:src="@drawable/new_bludger_button"
             android:contentDescription="@string/bludger_text"
             android:visibility="gone"
             android:layout_centerInParent="true" 
@@ -90,6 +90,7 @@
             android:textSize="32sp" 
             android:textStyle="bold"
             android:singleLine="true" 
+            android:visibility="gone"
             android:text="@string/slytherin_score"
             android:layout_toRightOf = "@+id/Slytherin"/>
    
@@ -101,8 +102,19 @@
             android:textSize="32sp" 
             android:textStyle="bold"
             android:singleLine="true" 
+            android:visibility="gone"
             android:text="@string/gryffindor_score"
             android:layout_below = "@+id/Slytherin"
             android:layout_toRightOf = "@+id/Gryffindor"/>
+    <TextView 
+            android:id="@+id/final_score"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" 
+            android:textColor="#CF5300"
+            android:textSize="120sp" 
+            android:textStyle="bold"
+            android:singleLine="true" 
+            android:text="@string/final_score"
+            android:visibility="gone"/>
 
 </RelativeLayout>

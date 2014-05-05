@@ -14,4 +14,7 @@
     <string name="gryffindor_text">Griffindor</string>
     <string name="slytherin_score">0</string>
     <string name="gryffindor_score">0</string>
+    <string name="final_score">Final Score</string>
+    <string name="title_activity_final_score">FinalScoreActivity</string>
+
 </resources>

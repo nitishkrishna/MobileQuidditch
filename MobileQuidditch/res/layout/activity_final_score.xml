@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin"
+    android:orientation="vertical"
+    android:label="@string/final_score"
+    android:background="@drawable/cloudbg"
+    tools:context=".FinalScoreActivity" >
+    <TextView 
+            android:id="@+id/final_score"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" 
+            android:textColor="#CF5300"
+            android:textSize="45sp" 
+            android:textStyle="bold"
+            android:singleLine="true" 
+            android:gravity="center"
+            android:text="@string/final_score"/>
+    
+   <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        >
+    
+        <LinearLayout
+            android:id="@+id/DashboardNewPost"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            >
+            <ImageView
+            android:id="@+id/Slytherin"
+            android:layout_width="100sp"
+            android:layout_height="100sp"
+            android:layout_gravity="top"
+            android:gravity="top"
+            android:src="@drawable/slytherin"
+            android:contentDescription="@string/slytherin_text"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/DashboardPostsList"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="vertical" >
+
+            <TextView 
+            android:id="@+id/Sly_score"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" 
+            android:textColor="#41A317"
+            android:textSize="80sp" 
+            android:textStyle="bold"
+            android:singleLine="true" 
+            android:text="@string/slytherin_score"/>
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        >
+        <LinearLayout
+            android:id="@+id/DashboardCommentsList"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            >
+            <ImageView
+            android:id="@+id/Gryffindor"
+            android:layout_width="100sp"
+            android:layout_height="100sp"
+            android:layout_gravity="top"
+            android:gravity="top"
+            android:src="@drawable/gryffindor"
+            android:contentDescription="@string/gryffindor_text"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/DashboardBlogParameters"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="vertical" >
+
+            <TextView 
+            android:id="@+id/Gryff_score"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" 
+            android:textColor="#41A317"
+            android:textSize="80sp" 
+            android:textStyle="bold"
+            android:singleLine="true" 
+            android:text="@string/gryffindor_score"/>
+        </LinearLayout>
+
+    </LinearLayout>
+
+</LinearLayout>

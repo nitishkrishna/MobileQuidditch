@@ -7,6 +7,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
+
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.PendingIntent;
@@ -49,6 +50,7 @@ public class MainActivity extends Activity{
   private boolean mWriteMode = false;
   NfcAdapter mNfcAdapter;
   static ImageView mNote;
+  static String score1, score2;
   static ImageView ball;
   boolean haveball;
   boolean listen_flag;
@@ -72,23 +74,6 @@ public class MainActivity extends Activity{
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     
-    //Network Configuration
-    
-    /*WifiManager wifiManager = (WifiManager) MainActivity.this.getSystemService(Context.WIFI_SERVICE); 
-    wifiManager.setWifiEnabled(true);
-    String networkSSID = "skanda";
-    String networkPass = "nitishkrishna";
-    WifiConfiguration conf = new WifiConfiguration();
-    conf.SSID = "\"" + networkSSID + "\""; 
-    conf.preSharedKey  = "\"" + networkPass + "\"";
-    conf.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.TKIP);
-    conf.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.CCMP);
-    conf.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.WPA_PSK);
-    conf.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.TKIP);
-    conf.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.CCMP);
-    conf.allowedProtocols.set(WifiConfiguration.Protocol.RSN);
-    netId = wifiManager.addNetwork(conf);*/
-
     //Set Initial Game State
     
     setContentView(R.layout.activity_main);
@@ -139,7 +124,24 @@ public class MainActivity extends Activity{
     findViewById(R.id.Snitch).setOnClickListener(ballCatcher);
     findViewById(R.id.Quaffle).setOnClickListener(ballCatcher);
     findViewById(R.id.Goal).setOnClickListener(goalTender);
- 
+    
+   /* LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(200,200);
+    params.
+    params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+    findViewById(R.id.final_score).setLayoutParams(params);
+    findViewById(R.id.Gryffindor).setLayoutParams(params);
+    params = new RelativeLayout.LayoutParams(200,200);
+    params.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
+    params.addRule(RelativeLayout.ALIGN_PARENT_TOP);
+    findViewById(R.id.Slytherin).setLayoutParams(params);
+    params = new RelativeLayout.LayoutParams(200,200);
+    params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
+    params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+    findViewById(R.id.Gryff_score).setLayoutParams(params);
+    params = new RelativeLayout.LayoutParams(200,200);
+    params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
+    params.addRule(RelativeLayout.ALIGN_PARENT_TOP);
+    findViewById(R.id.Sly_score).setLayoutParams(params);*/
   }
 
   @Override
@@ -310,6 +312,7 @@ public class MainActivity extends Activity{
         .setOnCancelListener(new DialogInterface.OnCancelListener() {
             @Override
             public void onCancel(DialogInterface dialog) {
+              if(mNote!=NULL)
                 mNote.setVisibility(View.VISIBLE);
             }
         }).create().show();
@@ -339,8 +342,8 @@ public class MainActivity extends Activity{
                   if(body.equalsIgnoreCase("Revive")){
                     wifiManager = (WifiManager) MainActivity.this.getSystemService(Context.WIFI_SERVICE); 
                     wifiManager.setWifiEnabled(true);
-                    String networkSSID = "SOUP BOY NETWORK";
-                    String networkPass = "Thuvakudiboys";
+                    String networkSSID = "NL8";
+                    String networkPass = "";
                     WifiConfiguration conf = new WifiConfiguration();
                     conf.SSID = "\"" + networkSSID + "\""; 
                     conf.preSharedKey  = "\"" + networkPass + "\"";
@@ -351,7 +354,11 @@ public class MainActivity extends Activity{
                     conf.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.CCMP);
                     conf.allowedProtocols.set(WifiConfiguration.Protocol.RSN);
                     netId = wifiManager.addNetwork(conf);
-                    findViewById(R.id.Goal).setOnClickListener(goalTender);    
+                    findViewById(R.id.Goal).setOnClickListener(goalTender);  
+                    if(mNote!=NULL){
+                      mNote.setVisibility(View.GONE);
+                      mNote=NULL;
+                    }
                     
                     //Put recontimer here
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
@@ -657,10 +664,16 @@ public class MainActivity extends Activity{
                                 gk=false;
                               }
                               MainActivity.this.findViewById(R.id.Goal).setOnClickListener(goalTender);
-                              if(mNote!=NULL){
-                                mNote.setVisibility(View.GONE);
-                                mNote=NULL;
-                              }
+                              
+                              MainActivity.this.runOnUiThread(new Runnable() {
+                                public void run() {
+                                  if(mNote!=NULL){
+                                    mNote.setOnClickListener(null);
+                                    mNote.setVisibility(View.GONE);
+                                    mNote=NULL;
+                                  }
+                                }
+                              });
                               System.out.println("Comes to knockout - " + values);
                               if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
                                 new fileSend().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,"knockedout");
@@ -688,6 +701,18 @@ public class MainActivity extends Activity{
                               MainActivity.this.runOnUiThread(new Runnable() {
                                 public void run() {
                                   Toast.makeText(MainActivity.this, "You missed the goal!", Toast.LENGTH_SHORT).show();
+                                }
+                              });
+                            }
+                            else if(values.equalsIgnoreCase("gameover")){
+                              MainActivity.this.runOnUiThread(new Runnable() {
+                                public void run() {
+                                  Intent finalScoreIntent = new Intent(MainActivity.this, FinalScoreActivity.class);
+                                  TextView slyscore = (TextView) findViewById(R.id.Sly_score);
+                                  score1 = slyscore.getText().toString();
+                                  TextView gryffscore = (TextView) findViewById(R.id.Gryff_score);
+                                  score2 = gryffscore.getText().toString();
+                                  startActivity(finalScoreIntent);
                                 }
                               });
                             }
