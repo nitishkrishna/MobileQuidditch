@@ -7,7 +7,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
-
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.PendingIntent;
@@ -33,6 +32,7 @@ import android.os.CountDownTimer;
 import android.os.Handler;
 import android.os.Parcelable;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.Menu;
 import android.view.View;
 import android.view.animation.Animation;
@@ -114,7 +114,7 @@ public class MainActivity extends Activity{
     wifiManager = (WifiManager) MainActivity.this.getSystemService(Context.WIFI_SERVICE); 
     rssiValue = wifiManager.getConnectionInfo().getRssi();
     System.out.println("RSSI Value: "+ String.valueOf(rssiValue));
-    //Game starting - final game state set up
+    //Game starting - final game state set u
     findViewById(R.id.Goal).setVisibility(View.VISIBLE);
     findViewById(R.id.Slytherin).setVisibility(View.VISIBLE);
     findViewById(R.id.Gryffindor).setVisibility(View.VISIBLE);
@@ -125,23 +125,6 @@ public class MainActivity extends Activity{
     findViewById(R.id.Quaffle).setOnClickListener(ballCatcher);
     findViewById(R.id.Goal).setOnClickListener(goalTender);
     
-   /* LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(200,200);
-    params.
-    params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
-    findViewById(R.id.final_score).setLayoutParams(params);
-    findViewById(R.id.Gryffindor).setLayoutParams(params);
-    params = new RelativeLayout.LayoutParams(200,200);
-    params.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
-    params.addRule(RelativeLayout.ALIGN_PARENT_TOP);
-    findViewById(R.id.Slytherin).setLayoutParams(params);
-    params = new RelativeLayout.LayoutParams(200,200);
-    params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
-    params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
-    findViewById(R.id.Gryff_score).setLayoutParams(params);
-    params = new RelativeLayout.LayoutParams(200,200);
-    params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
-    params.addRule(RelativeLayout.ALIGN_PARENT_TOP);
-    findViewById(R.id.Sly_score).setLayoutParams(params);*/
   }
 
   @Override
@@ -217,7 +200,8 @@ public class MainActivity extends Activity{
         }
         
         final String b_msg = button_msg;
-        new AlertDialog.Builder(MainActivity.this).setTitle("Choose Action")
+        
+        AlertDialog.Builder adBuilder = new AlertDialog.Builder(MainActivity.this).setTitle("Choose Action")
         .setPositiveButton(action_msg, new DialogInterface.OnClickListener() {
           
             @Override
@@ -244,8 +228,12 @@ public class MainActivity extends Activity{
               haveball = false;
               mNote.setOnClickListener(ballCatcher);
               findViewById(R.id.Goal).setOnClickListener(goalTender);
-              new AlertDialog.Builder(MainActivity.this).setTitle("Touch tag to write")
-              .create().show();
+              AlertDialog.Builder transBuilder = new AlertDialog.Builder(MainActivity.this).setTitle("Touch Tag to Write");
+              AlertDialog transdialog = transBuilder.show();
+              TextView titleView = (TextView)transdialog.findViewById(MainActivity.this.getResources().getIdentifier("alertTitle", "id", "android"));
+              if (titleView != null) {
+                  titleView.setGravity(Gravity.CENTER);
+              }
               disableTagWriteMode();
               enableNdefExchangeMode();
               if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
@@ -265,8 +253,12 @@ public class MainActivity extends Activity{
               enableNdefExchangeMode();
               haveball = true;
             }
-        }).show();
-        
+        });
+        AlertDialog dialog = adBuilder.show();
+        TextView titleView = (TextView)dialog.findViewById(MainActivity.this.getResources().getIdentifier("alertTitle", "id", "android"));
+        if (titleView != null) {
+            titleView.setGravity(Gravity.CENTER);
+        }
     }
     };
     
@@ -330,7 +322,7 @@ public class MainActivity extends Activity{
     
     private void promptForContent(final NdefMessage msg) {
       
-      new AlertDialog.Builder(this).setTitle("Receive Ball/Revive?")
+      AlertDialog.Builder adBuilder = new AlertDialog.Builder(MainActivity.this).setTitle("Receive Ball/revive?")
           .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
               @Override
               public void onClick(DialogInterface arg0, int arg1) {
@@ -359,7 +351,9 @@ public class MainActivity extends Activity{
                       mNote.setVisibility(View.GONE);
                       mNote=NULL;
                     }
-                    
+                    findViewById(R.id.Quaffle).setOnClickListener(ballCatcher);
+                    findViewById(R.id.Bludger).setOnClickListener(ballCatcher);
+                    findViewById(R.id.Snitch).setOnClickListener(ballCatcher);
                     //Put recontimer here
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
                       new reconTimer().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
@@ -397,7 +391,12 @@ public class MainActivity extends Activity{
               public void onClick(DialogInterface arg0, int arg1) {
                
               }
-          }).show();
+          });
+      AlertDialog dialog = adBuilder.show();
+      TextView titleView = (TextView)dialog.findViewById(MainActivity.this.getResources().getIdentifier("alertTitle", "id", "android"));
+      if (titleView != null) {
+          titleView.setGravity(Gravity.CENTER);
+      }
       }
 
   private void setNoteBody(String body) {
@@ -715,6 +714,19 @@ public class MainActivity extends Activity{
                                   startActivity(finalScoreIntent);
                                 }
                               });
+                            }
+                            else if(values.equalsIgnoreCase("secondgoalkeeper")){
+                              if(MainActivity.this.cTimer!=null){
+                                MainActivity.this.cTimer.cancel();
+                                MainActivity.this.cTimer=null;
+                                gk=false;
+                              }
+                              MainActivity.this.findViewById(R.id.Goal).setOnClickListener(goalTender);
+                              MainActivity.this.runOnUiThread(new Runnable() {
+                                public void run() {
+                                  Toast.makeText(MainActivity.this, "Your team is already goalkeeping!", Toast.LENGTH_SHORT).show();
+                                }
+                              });                   
                             }
                             else {
                               gk=false;
